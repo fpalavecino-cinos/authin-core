@@ -71,6 +71,7 @@ public class PostService implements IPostService {
                     .userFullName(userFullName)
                     .dateTimeValue(getPostDateTimeValue(e.getPublicationDate()))
                     .imagesUrls(e.getImages().stream().map(PostImageEntity::getUrl).toList())
+                    .currencySymbol(e.getCurrencySymbol())
                     .build();
         });
 
@@ -78,29 +79,30 @@ public class PostService implements IPostService {
 
     public String getPostDateTimeValue(LocalDateTime publicationDate){
         LocalDateTime today = LocalDateTime.now();
-        long years = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
-        long months = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
+        long years = Math.abs(ChronoUnit.YEARS.between(publicationDate, today));
+        long months = Math.abs(ChronoUnit.MONTHS.between(publicationDate, today));
         long days = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
         System.out.println(days);
-        long hours = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
-        long minutes = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
-        long seconds = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
+        long hours = Math.abs(ChronoUnit.HOURS.between(publicationDate, today));
+        System.out.println(hours);
+        long minutes = Math.abs(ChronoUnit.MINUTES.between(publicationDate, today));
+        long seconds = Math.abs(ChronoUnit.SECONDS.between(publicationDate, today));
         if (days>=7 && days<14){
-            return "1 semana";
+            return "1 smn";
         } else if (days>=14 && days<21){
-            return "2 semanas";
+            return "2 smn";
         } else if (days>=21 && days<28){
-            return "3 semanas";
+            return "3 smn";
         } else if (days > 0) {
             return days + "d";
         } else if (hours > 0) {
             return hours + "h";
         } else if (minutes > 0) {
-            return minutes + "m";
+            return minutes + "mn";
         } else if (seconds > 0){
             return seconds + "s";
         } else if (years > 0){
-            return years + "y";
+            return years + "a";
         } else if (months > 0) {
             return months + "m";
         } else {

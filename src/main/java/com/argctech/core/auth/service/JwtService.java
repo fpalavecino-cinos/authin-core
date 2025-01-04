@@ -1,9 +1,7 @@
 package com.argctech.core.auth.service;
 
 import com.argctech.core.users.dto.UserDTO;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +34,18 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateRefreshToken(UserDTO userDTO) {
+        return Jwts.builder()
+                .subject(userDTO.username())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MINUTES * 60 * 1000))
+                .header()
+                .type("JWT")
+                .and()
+                .signWith(generateKey(), Jwts.SIG.HS256)
+                .compact();
+    }
+
     private SecretKey generateKey(){
         byte[] passwordDecode = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(passwordDecode);
@@ -46,7 +56,20 @@ public class JwtService {
     }
 
     private Claims extractPayload(final String token) {
-        return Jwts.parser().verifyWith(generateKey()).build().parseSignedClaims(token).getPayload();
+        try{
+            return Jwts.parser().verifyWith(generateKey()).build().parseSignedClaims(token).getPayload();
+        }  catch (ExpiredJwtException e) {
+        // Manejo de la excepción (por ejemplo, registrar el error o lanzar una excepción personalizada)
+        throw new JwtException("Token has expired", e);
+    }
     }
 
+    public boolean isValidRefreshToken(String token) {
+        try {
+            extractUsername(token);
+            return true;
+        } catch (JwtException e) {
+            return false;
+        }
+    }
 }

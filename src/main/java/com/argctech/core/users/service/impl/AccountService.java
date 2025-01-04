@@ -40,11 +40,13 @@ public class AccountService implements IAccountService {
         AccountEntity entity = accountRepository.findById(id).orElseThrow(()->new UserNotFoundException("Usuario no encontrado"));
         return AccountDTO.builder()
                 .id(entity.getId())
-                .user(DTOConverter.toDTO(entity.getUser(), UserAccountDTO.class))
+                .email(entity.getUser().getEmail())
+                .name(entity.getUser().getName())
+                .lastname(entity.getUser().getLastname())
+                .username(entity.getUser().getUsername())
                 .points(entity.getPoints())
                 .followers(entity.getFollowers())
                 .followings(entity.getFollowings())
-                .posts(entity.getPosts())
                 .avatarImg(entity.getAvatarImg())
                 .build();
     }

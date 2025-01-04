@@ -44,7 +44,8 @@ public class AuthService {
         authenticationManager.authenticate(authentication);
 
         UserDTO user = userService.getByUsername(loginRequest.username());
-        String jwt = jwtService.generateToken(user);
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
 
         return LoginResponse.builder()
                 .name(user.name())
@@ -52,8 +53,19 @@ public class AuthService {
                 .username(user.username())
                 .email(user.email())
                 .role(user.role().name())
-                .token(jwt)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
     }
 
+    public String refreshToken(String refreshToken) throws UserNotFoundException {
+        // Validar el refresh token
+        if (!jwtService.isValidRefreshToken(refreshToken)) {
+            throw new IllegalArgumentException("Refresh token inválido o expirado");
+        }
+        String username = jwtService.extractUsername(refreshToken);
+        UserDTO user = userService.getByUsername(username);
+
+        return jwtService.generateToken(user);
+    }
 }

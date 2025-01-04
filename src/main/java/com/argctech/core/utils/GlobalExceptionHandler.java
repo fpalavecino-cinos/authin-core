@@ -1,5 +1,6 @@
 package com.argctech.core.utils;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,43 +24,61 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handlerGenericException(HttpServletRequest req, Exception e) {
+        String message = messageUtil.getMessage("error.generic", Locale.forLanguageTag("es"));
         ApiError apiError = ApiError.builder()
                 .backendMessage(e.getLocalizedMessage())
-                .message(messageUtil.getMessage("error.generic", Locale.forLanguageTag("es")))
+                .message(message)
                 .url(req.getRequestURL().toString())
                 .date(LocalDateTime.now())
                 .method(req.getMethod())
                 .build();
 
-        log.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).reduce("", (a, b) -> a + "\n" + b));
-
+        log.error("{}: {}", message, e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<?> handlerAccessDeniedException(HttpServletRequest req, AccessDeniedException e) {
+        String message = messageUtil.getMessage("error.access.denied", Locale.forLanguageTag("es"));
         ApiError apiError = ApiError.builder()
                 .backendMessage(e.getMessage())
                 .url(req.getRequestURL().toString())
                 .date(LocalDateTime.now())
                 .method(req.getMethod())
-                .message(messageUtil.getMessage("error.access.denied", Locale.forLanguageTag("es")))
+                .message(message)
                 .build();
+
+        log.error("{}: {}", message, e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<?> handlerAccessDeniedException(HttpServletRequest req, BadCredentialsException e) {
+        String message = messageUtil.getMessage("error.invalid.credentials", Locale.forLanguageTag("es"));
         ApiError apiError = ApiError.builder()
                 .backendMessage(e.getMessage())
                 .url(req.getRequestURL().toString())
                 .date(LocalDateTime.now())
                 .method(req.getMethod())
-                .message(messageUtil.getMessage("error.invalid.credentials", Locale.forLanguageTag("es")))
+                .message(message)
                 .build();
 
-        log.error(Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).reduce("", (a, b) -> a + "\n" + b));
-        log.error(messageUtil.getMessage("invalid.credentials", Locale.getDefault()));
+        log.error("{}: {}", message, e.getMessage(), e);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
+    }
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<?> handlerExpiredJwtException(HttpServletRequest req, ExpiredJwtException e) {
+        String message = messageUtil.getMessage("error.expired.jwt", Locale.forLanguageTag("es"));
+        ApiError apiError = ApiError.builder()
+                .backendMessage(e.getMessage())
+                .url(req.getRequestURL().toString())
+                .date(LocalDateTime.now())
+                .method(req.getMethod())
+                .message(message)
+                .build();
+
+        log.error("{}: {}", message, e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
     }
 
