@@ -8,10 +8,10 @@
 		<version>3.3.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.argctech</groupId>
-	<artifactId>core</artifactId>
+	<groupId>org.cinos</groupId>
+	<artifactId>authin-core</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>argctech-core</name>
+	<name>authin-core</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
 	<licenses>
