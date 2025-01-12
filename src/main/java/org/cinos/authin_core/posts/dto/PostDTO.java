@@ -1,6 +1,7 @@
 package org.cinos.authin_core.posts.dto;
 import lombok.Builder;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Builder
 public record PostDTO(
@@ -14,5 +15,6 @@ public record PostDTO(
         Long userId,
         String description,
         Integer likes,
-        Boolean active) {
+        Boolean active,
+        List<String> imagesUrls) {
 }

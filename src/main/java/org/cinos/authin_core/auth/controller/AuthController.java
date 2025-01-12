@@ -29,8 +29,8 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(userCreateRequest));
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<String> refresh(@RequestBody String refreshToken) throws UserNotFoundException {
+    @GetMapping("/refresh")
+    public ResponseEntity<String> refresh(@RequestParam String refreshToken) throws UserNotFoundException {
         return ResponseEntity.ok(authService.refreshToken(refreshToken));
     }
 

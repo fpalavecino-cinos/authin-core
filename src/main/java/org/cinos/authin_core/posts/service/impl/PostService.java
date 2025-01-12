@@ -3,6 +3,8 @@ package org.cinos.authin_core.posts.service.impl;
 import org.cinos.authin_core.posts.controller.request.PostCreateRequest;
 import org.cinos.authin_core.posts.dto.PostDTO;
 import org.cinos.authin_core.posts.dto.PostFeedDTO;
+import org.cinos.authin_core.posts.dto.PostProfileDTO;
+import org.cinos.authin_core.posts.dto.mapper.PostMapper;
 import org.cinos.authin_core.posts.entity.PostEntity;
 import org.cinos.authin_core.posts.entity.PostImageEntity;
 import org.cinos.authin_core.posts.repository.PostImageRepository;
@@ -11,8 +13,8 @@ import org.cinos.authin_core.posts.repository.specs.PostSpecifications;
 import org.cinos.authin_core.posts.service.IPostService;
 import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.authin_core.follows.service.IFollowService;
-import org.cinos.authin_core.users.dto.DTOConverter;
 import org.cinos.authin_core.users.dto.UserDTO;
+import org.cinos.authin_core.users.service.impl.AccountService;
 import org.cinos.authin_core.users.service.impl.UserService;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,16 +36,18 @@ public class PostService implements IPostService {
 
     private final PostRepository postRepository;
     private final IFollowService followService;
-//    private final KafkaTemplate<String, String> kafkaTemplate;
+//  private final KafkaTemplate<String, String> kafkaTemplate;
     private final String POST_NOT_FOUND = "La publicacion no se encontró";
     private final UserService userService;
     private final StorageService storageService;
     private final PostImageRepository postImageRepository;
+    private final AccountService accountService;
+    private final PostMapper postMapper;
 
     @Override
     public List<PostDTO> getPostPageable(Integer page, Integer size) {
         List<PostEntity> entityList = postRepository.findAll(PageRequest.of(page, size)).toList();
-        return entityList.stream().map(e -> DTOConverter.toDTO(e, PostDTO.class)).toList();
+        return entityList.stream().map(postMapper::toDTO).toList();
     }
 
     @Override
@@ -113,17 +117,17 @@ public class PostService implements IPostService {
     public Page<PostDTO> getFollowingsPosts(Long userId, Pageable pageable) throws UserNotFoundException {
         List<UserDTO> followings = followService.getFollowings(userId);
         List<Long> followingsIds = followings.stream().map(UserDTO::id).toList();
-        return postRepository.findAllByUserIdInOrderByPublicationDateDesc(followingsIds, PostDTO.class, pageable);
+        return postRepository.findAllByUserIdInOrderByPublicationDateDesc(followingsIds, pageable).map(postMapper::toDTO);
     }
 
     @Override
     public PostDTO getById(Long id) throws PostNotFoundException {
-        return postRepository.findById(id, PostDTO.class).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND));
+        return postMapper.toDTO(postRepository.findById(id).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND)));
     }
 
     @Override
     public List<PostDTO> getByUserId(Long userId) {
-        return postRepository.findByUserId(userId, PostDTO.class);
+        return postRepository.findByUserId(userId).stream().map(postMapper::toDTO).toList();
     }
 
     @Override
@@ -150,7 +154,39 @@ public class PostService implements IPostService {
         postEntity.setImages(imagesEntity);
         postRepository.save(postEntity);
         postImageRepository.saveAll(imagesEntity);
-        return DTOConverter.toDTO(postEntity, PostDTO.class);
+        return postMapper.toDTO(postEntity);
+    }
+
+    @Override
+    public List<PostProfileDTO> getPostsProfile(Long userId) throws UserNotFoundException {
+        List<PostEntity> posts = postRepository.findAllByUserId(userId);
+        return posts.stream().map(e -> PostProfileDTO.builder()
+                .id(e.getId())
+                .firstImage(e.getImages().get(0).getUrl())
+                .build()).toList();
+    }
+
+    @Override
+    public PostEntity getPostEntityById(Long id) throws PostNotFoundException {
+        return postRepository.findById(id).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND));
+    }
+
+    @Override
+    public List<PostProfileDTO> getSavedPostsProfile(final Long userId) throws UserNotFoundException {
+        List<PostEntity> posts = postRepository.findByUsersSaved_Id(userId);
+        return posts.stream().map(e -> PostProfileDTO.builder()
+                .id(e.getId())
+                .firstImage(e.getImages().get(0).getUrl())
+                .build()).toList();
+
+    }
+
+    @Override
+    public void saveUserPost(final Long userId, final Long postId) throws PostNotFoundException, UserNotFoundException {
+        PostEntity post = postRepository.findById(postId).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND));
+        post.getUsersSaved().add(accountService.getAccountEntityById(userId));
+        System.out.println(post.getUsersSaved().size());
+        postRepository.save(post);
     }
 
 }

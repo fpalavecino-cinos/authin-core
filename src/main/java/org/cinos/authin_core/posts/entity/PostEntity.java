@@ -3,6 +3,8 @@ package org.cinos.authin_core.posts.entity;
 import org.cinos.authin_core.posts.models.CurrencySymbol;
 import jakarta.persistence.*;
 import lombok.*;
+import org.cinos.authin_core.users.entity.AccountEntity;
+import org.cinos.authin_core.users.entity.UserEntity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -35,5 +37,12 @@ public class PostEntity implements Serializable {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImageEntity> images = new ArrayList<>();
     private Boolean active;
+    @ManyToMany
+    @JoinTable(
+            name = "account_saved_posts",
+            joinColumns = @JoinColumn(name = "post_id"),
+            inverseJoinColumns = @JoinColumn(name = "account_id")
+    )
+    private List<AccountEntity> usersSaved;
 
 }

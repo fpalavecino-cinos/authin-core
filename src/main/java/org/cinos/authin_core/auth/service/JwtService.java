@@ -8,7 +8,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class JwtService {
@@ -17,8 +21,8 @@ public class JwtService {
     private String SECRET_KEY;
     @Value("${security.jwt.expiration-time-minutes}")
     private Integer EXPIRATION_TIME_MINUTES;
-    @Value("${security.jwt.refresh-expiration-time-minutes}")
-    private Integer REFRESH_EXPIRATION_TIME_MINUTES;
+    @Value("${security.jwt.refresh-expiration-time-days}")
+    private Integer REFRESH_EXPIRATION_TIME_DAYS;
 
     public String generateToken(UserDTO userDTO) {
         return Jwts.builder()
@@ -40,7 +44,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(userDTO.username())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRATION_TIME_MINUTES * 60 * 1000))
+                .expiration(Date.from(LocalDateTime.now().plusDays(REFRESH_EXPIRATION_TIME_DAYS).atZone(ZoneId.systemDefault()).toInstant()))
                 .header()
                 .type("JWT")
                 .and()
@@ -61,12 +65,12 @@ public class JwtService {
         try{
             return Jwts.parser().verifyWith(generateKey()).build().parseSignedClaims(token).getPayload();
         }  catch (ExpiredJwtException e) {
-        // Manejo de la excepción (por ejemplo, registrar el error o lanzar una excepción personalizada)
         throw new JwtException("Token has expired", e);
     }
     }
 
     public boolean isValidRefreshToken(String token) {
+
         try {
             extractUsername(token);
             return true;

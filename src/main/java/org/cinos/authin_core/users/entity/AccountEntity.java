@@ -2,6 +2,10 @@ package org.cinos.authin_core.users.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.cinos.authin_core.posts.entity.PostEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter @Setter @Builder @AllArgsConstructor @NoArgsConstructor
@@ -16,4 +20,6 @@ public class AccountEntity {
     private Long followers;
     private Long followings;
     private Integer posts;
+    @ManyToMany(mappedBy = "usersSaved")
+    private List<PostEntity> savedPosts;
 }

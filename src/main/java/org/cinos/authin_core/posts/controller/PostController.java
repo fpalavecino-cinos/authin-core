@@ -3,8 +3,10 @@ package org.cinos.authin_core.posts.controller;
 import org.cinos.authin_core.posts.controller.request.PostCreateRequest;
 import org.cinos.authin_core.posts.dto.PostDTO;
 import org.cinos.authin_core.posts.dto.PostFeedDTO;
+import org.cinos.authin_core.posts.dto.PostProfileDTO;
 import org.cinos.authin_core.posts.service.IPostService;
 import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
+import org.cinos.authin_core.users.entity.AccountEntity;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -60,6 +63,17 @@ public class PostController {
         return ResponseEntity.ok(postService.getByUserId(userId));
     }
 
+    @GetMapping("/profile/{userId}")
+    public ResponseEntity<List<PostProfileDTO>> getPostsProfileByUserId(@PathVariable final Long userId) throws UserNotFoundException {
+        return ResponseEntity.ok(postService.getPostsProfile(userId));
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/profile/{userId}/saved-posts")
+    public ResponseEntity<List<PostProfileDTO>> getSavedPostsProfile(@PathVariable final Long userId) throws UserNotFoundException {
+        return ResponseEntity.ok(postService.getSavedPostsProfile(userId));
+    }
+
     @PreAuthorize("hasRole('USER')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, value = "/create")
     public ResponseEntity<PostDTO> createPost(
@@ -69,5 +83,13 @@ public class PostController {
         PostCreateRequest post = objectMapper.readValue(request, PostCreateRequest.class);
         return ResponseEntity.ok(postService.createPost(post, images));
     }
+
+    @PreAuthorize("hasRole('USER')")
+    @PostMapping("/account/{userId}/save-post/{postId}")
+    public ResponseEntity<Object> saveUserPost(@PathVariable final Long userId, @PathVariable final Long postId) throws UserNotFoundException, PostNotFoundException {
+        postService.saveUserPost(userId, postId);
+        return ResponseEntity.ok().build();
+    }
+
 
 }

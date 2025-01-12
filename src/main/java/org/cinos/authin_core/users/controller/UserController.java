@@ -1,5 +1,6 @@
 package org.cinos.authin_core.users.controller;
 
+import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.authin_core.users.controller.request.UserCreateRequest;
 import org.cinos.authin_core.users.dto.AccountDTO;
 import org.cinos.authin_core.users.dto.UserDTO;
@@ -45,7 +46,7 @@ public class UserController {
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    @GetMapping("/logged/account")
+    @GetMapping("/account/logged")
     public ResponseEntity<AccountDTO> getUserLoggedAccount() {
         return ResponseEntity.ok(accountService.getUserLoggedAccount());
     }

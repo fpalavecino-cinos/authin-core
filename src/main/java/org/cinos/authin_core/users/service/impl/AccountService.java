@@ -1,6 +1,10 @@
 package org.cinos.authin_core.users.service.impl;
 
+import org.cinos.authin_core.posts.entity.PostEntity;
+import org.cinos.authin_core.posts.service.impl.PostService;
+import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.authin_core.users.dto.AccountDTO;
+import org.cinos.authin_core.users.dto.DTOConverter;
 import org.cinos.authin_core.users.entity.AccountEntity;
 import org.cinos.authin_core.users.entity.UserEntity;
 import org.cinos.authin_core.users.repository.AccountRepository;
@@ -79,6 +83,11 @@ public class AccountService implements IAccountService {
                 .followings(accountEntity.getFollowings())
                 .avatarImg(accountEntity.getAvatarImg())
                 .build();
+    }
+
+    @Override
+    public AccountEntity getAccountEntityById(Long id) throws UserNotFoundException {
+        return accountRepository.findByUser_Id(id).orElseThrow(()->new UserNotFoundException("Usuario no encontrado"));
     }
 
 }
