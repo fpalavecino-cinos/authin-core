@@ -1,5 +1,6 @@
 package org.cinos.authin_core.auth.config.filter;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import org.cinos.authin_core.auth.service.JwtService;
 import org.cinos.authin_core.users.service.impl.UserService;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
@@ -33,18 +34,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         String token = authorizationHeader.split(" ")[1];
-        String username = jwtService.extractUsername(token);
-        UserDetails userDetails = null;
         try {
-            userDetails = userService.getByUsernameEntity(username);
-        } catch (UserNotFoundException e) {
-            throw new RuntimeException(e);
+            String username = jwtService.extractUsername(token);
+            UserDetails userDetails = null;
+            try {
+                userDetails = userService.getByUsernameEntity(username);
+            } catch (UserNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            authentication.setDetails(new WebAuthenticationDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (ExpiredJwtException e) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has expired");
+            return;
+        } catch (RuntimeException e) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+            return;
         }
-
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        authentication.setDetails(new WebAuthenticationDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
         filterChain.doFilter(request, response);
     }
+
 }

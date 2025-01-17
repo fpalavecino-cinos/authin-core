@@ -62,11 +62,7 @@ public class JwtService {
     }
 
     private Claims extractPayload(final String token) {
-        try{
-            return Jwts.parser().verifyWith(generateKey()).build().parseSignedClaims(token).getPayload();
-        }  catch (ExpiredJwtException e) {
-        throw new JwtException("Token has expired", e);
-    }
+        return Jwts.parser().verifyWith(generateKey()).build().parseSignedClaims(token).getPayload();
     }
 
     public boolean isValidRefreshToken(String token) {

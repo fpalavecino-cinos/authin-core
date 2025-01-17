@@ -2,6 +2,7 @@ package org.cinos.authin_core.auth.config;
 
 import org.cinos.authin_core.auth.config.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.cinos.authin_core.auth.handler.CustomAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -22,7 +23,7 @@ public class SecurityConfig {
 
     private final AuthenticationProvider daoAuthenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final AuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -31,8 +32,12 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sess->sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(daoAuthenticationProvider)
-                .exceptionHandling(exc -> exc.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exc -> exc.authenticationEntryPoint(authenticationEntryPoint))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**").permitAll() // Permitir rutas públicas
+                        .anyRequest().authenticated() // Todo lo demás requiere autenticación
+                )
                 .build();
     }
 

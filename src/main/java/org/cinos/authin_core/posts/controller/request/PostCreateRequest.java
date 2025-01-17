@@ -1,5 +1,6 @@
 package org.cinos.authin_core.posts.controller.request;
 
+import org.cinos.authin_core.posts.dto.PostLocationDTO;
 import org.cinos.authin_core.posts.models.CurrencySymbol;
 import lombok.Builder;
 
@@ -13,7 +14,11 @@ public record PostCreateRequest(
         Boolean isUsed,
         Double price,
         String description,
+        String fuel,
+        String transmission,
         Long userId,
         Boolean active,
+        String kilometers,
+        PostLocationDTO location,
         CurrencySymbol currencySymbol) implements Serializable {
 }

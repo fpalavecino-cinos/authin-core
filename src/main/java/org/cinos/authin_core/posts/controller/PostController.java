@@ -78,17 +78,30 @@ public class PostController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, value = "/create")
     public ResponseEntity<PostDTO> createPost(
             @RequestParam("post") final String request,
-            @RequestParam("images") final List<MultipartFile> images) throws IOException {
+            @RequestParam("images") final List<MultipartFile> images) throws IOException, UserNotFoundException {
         ObjectMapper objectMapper = new ObjectMapper();
         PostCreateRequest post = objectMapper.readValue(request, PostCreateRequest.class);
         return ResponseEntity.ok(postService.createPost(post, images));
     }
 
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping("/account/{userId}/save-post/{postId}")
     public ResponseEntity<Object> saveUserPost(@PathVariable final Long userId, @PathVariable final Long postId) throws UserNotFoundException, PostNotFoundException {
         postService.saveUserPost(userId, postId);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/account/{userId}/unsave-post/{postId}")
+    public ResponseEntity<Object> userUnsavePost(@PathVariable final Long userId, @PathVariable final Long postId) throws PostNotFoundException {
+        postService.userUnsavePost(userId, postId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/account/{userId}/saved/{postId}")
+    public ResponseEntity<Boolean> userSavedPost(@PathVariable final Long userId, @PathVariable final Long postId) throws UserNotFoundException, PostNotFoundException {
+        return ResponseEntity.ok(postService.userSavedPost(userId, postId));
     }
 
 

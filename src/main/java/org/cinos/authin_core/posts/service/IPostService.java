@@ -20,9 +20,11 @@ public interface IPostService {
     Page<PostDTO> getFollowingsPosts(Long userId, Pageable pageable) throws UserNotFoundException;
     PostDTO getById(Long id) throws PostNotFoundException;
     List<PostDTO> getByUserId(Long userId);
-    PostDTO createPost(PostCreateRequest request, List<MultipartFile> files) throws IOException;
+    PostDTO createPost(PostCreateRequest request, List<MultipartFile> files) throws IOException, UserNotFoundException;
     List<PostProfileDTO> getPostsProfile(Long userId) throws UserNotFoundException;
     PostEntity getPostEntityById(Long id) throws PostNotFoundException;
     List<PostProfileDTO> getSavedPostsProfile(Long userId) throws UserNotFoundException;
     void saveUserPost(Long userId, Long postId) throws PostNotFoundException, UserNotFoundException;
+    Boolean userSavedPost(Long userId, Long postId) throws PostNotFoundException, UserNotFoundException;
+    void userUnsavePost(Long userId, Long postId) throws PostNotFoundException;
 }

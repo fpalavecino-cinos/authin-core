@@ -7,6 +7,7 @@ import java.util.List;
 
 @Builder
 public record PostFeedDTO(
+        Long id,
         String make,
         String model,
         String year,

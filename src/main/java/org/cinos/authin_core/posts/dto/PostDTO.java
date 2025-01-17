@@ -1,5 +1,6 @@
 package org.cinos.authin_core.posts.dto;
 import lombok.Builder;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,9 +13,14 @@ public record PostDTO(
         Double price,
         Boolean isUsed,
         LocalDateTime publicationDate,
-        Long userId,
+        String userFullName,
         String description,
         Integer likes,
         Boolean active,
+        String currencySymbol,
+        String kilometers,
+        String fuel,
+        String transmission,
+        PostLocationDTO location,
         List<String> imagesUrls) {
 }

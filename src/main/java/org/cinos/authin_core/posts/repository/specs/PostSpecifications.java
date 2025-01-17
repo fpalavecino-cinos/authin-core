@@ -11,7 +11,8 @@ public class PostSpecifications {
 
     public static Specification<PostEntity> postsOfFollowingsOrAll(List<Long> followingsIds, LocalDateTime startDate) {
         return (root, query, criteriaBuilder) -> {
-            Predicate followingsPredicate = root.get("userId").in(followingsIds);
+            var accountJoin = root.join("userAccount");
+            Predicate followingsPredicate = accountJoin.get("id").in(followingsIds);
             Predicate datePredicate = criteriaBuilder.greaterThanOrEqualTo(root.get("publicationDate"), startDate);
 
             // Combina las condiciones

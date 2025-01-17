@@ -4,7 +4,6 @@ import org.cinos.authin_core.posts.models.CurrencySymbol;
 import jakarta.persistence.*;
 import lombok.*;
 import org.cinos.authin_core.users.entity.AccountEntity;
-import org.cinos.authin_core.users.entity.UserEntity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -29,10 +28,15 @@ public class PostEntity implements Serializable {
     private Double price;
     @Enumerated(EnumType.STRING)
     private CurrencySymbol currencySymbol;
+    private String kilometers;
+    private String fuel;
+    private String transmission;
     private String description;
     @Column(name = "publication_date")
     private LocalDateTime publicationDate;
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "account_id", nullable = false)
+    private AccountEntity userAccount;
     private Integer likes;
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImageEntity> images = new ArrayList<>();
@@ -44,5 +48,7 @@ public class PostEntity implements Serializable {
             inverseJoinColumns = @JoinColumn(name = "account_id")
     )
     private List<AccountEntity> usersSaved;
+    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private PostLocationEntity location;
 
 }

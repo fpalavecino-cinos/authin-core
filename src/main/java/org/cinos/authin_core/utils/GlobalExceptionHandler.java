@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
                 .build();
 
         log.error("{}: {}", message, e.getMessage(), e);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(apiError);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
     }
 
 

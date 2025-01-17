@@ -55,8 +55,6 @@ public class AuthService {
     }
 
     public String refreshToken(String refreshToken) throws UserNotFoundException {
-        // Validar el refresh token
-        System.out.println(refreshToken);
         if (!jwtService.isValidRefreshToken(refreshToken)) {
             throw new IllegalArgumentException("Refresh token inválido o expirado");
         }
