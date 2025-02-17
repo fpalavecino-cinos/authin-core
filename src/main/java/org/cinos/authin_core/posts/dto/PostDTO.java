@@ -12,6 +12,7 @@ public record PostDTO(
         String year,
         Double price,
         Boolean isUsed,
+        Long userId,
         LocalDateTime publicationDate,
         String userFullName,
         String description,
@@ -22,5 +23,6 @@ public record PostDTO(
         String fuel,
         String transmission,
         PostLocationDTO location,
-        List<String> imagesUrls) {
+        List<String> imagesUrls,
+        String userAvatar) {
 }

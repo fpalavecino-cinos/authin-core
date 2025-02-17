@@ -64,7 +64,6 @@ public class AccountService implements IAccountService {
         AccountEntity account = accountRepository.findById(toUserId).orElseThrow(()->new UsernameNotFoundException("Usuario no encontrado"));
         account.setFollowers(account.getFollowers() + 1);
         accountRepository.save(account);
-
     }
 
     @Override
@@ -88,6 +87,20 @@ public class AccountService implements IAccountService {
     @Override
     public AccountEntity getAccountEntityById(Long id) throws UserNotFoundException {
         return accountRepository.findByUser_Id(id).orElseThrow(()->new UserNotFoundException("Usuario no encontrado"));
+    }
+
+    @Override
+    public void decrementFollowings(Long fromUserId) {
+        AccountEntity account = accountRepository.findById(fromUserId).orElseThrow(()->new UsernameNotFoundException("Usuario no encontrado"));
+        account.setFollowings(account.getFollowings() - 1);
+        accountRepository.save(account);
+    }
+
+    @Override
+    public void decrementFollowers(Long toUserId) {
+        AccountEntity account = accountRepository.findById(toUserId).orElseThrow(()->new UsernameNotFoundException("Usuario no encontrado"));
+        account.setFollowers(account.getFollowers() - 1);
+        accountRepository.save(account);
     }
 
 }

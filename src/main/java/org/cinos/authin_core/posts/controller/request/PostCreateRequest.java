@@ -13,7 +13,6 @@ public record PostCreateRequest(
         String year,
         Boolean isUsed,
         Double price,
-        String description,
         String fuel,
         String transmission,
         Long userId,

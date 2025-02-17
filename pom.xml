@@ -12,6 +12,7 @@
 	<artifactId>authin-core</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>authin-core</name>
+	<packaging>jar</packaging>
 	<description>Demo project for Spring Boot</description>
 	<url/>
 	<licenses>

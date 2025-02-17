@@ -15,8 +15,10 @@ public record PostFeedDTO(
         CurrencySymbol currencySymbol,
         Boolean isUsed,
         String userFullName,
+        Long userId,
         String dateTimeValue,
-        String ubication,
+        PostLocationDTO location,
+        String kilometers,
         List<String> imagesUrls
 ) {
 }

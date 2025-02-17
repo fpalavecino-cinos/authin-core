@@ -23,6 +23,16 @@ public class FollowController {
         return ResponseEntity.ok(followService.followUser(fromUserId, toUserId));
     }
 
+    @DeleteMapping("/unfollow")
+    public ResponseEntity<FollowDTO> unfollowUser(@RequestParam final Long fromUserId, @RequestParam final Long toUserId) throws UserFollowingException, UserNotFoundException {
+        return ResponseEntity.ok(followService.unfollowUser(fromUserId, toUserId));
+    }
+
+    @GetMapping("/is-following")
+    public ResponseEntity<Boolean> isFollowing(@RequestParam final Long fromUserId, @RequestParam final Long toUserId) throws UserFollowingException, UserNotFoundException {
+        return ResponseEntity.ok(followService.isFollowing(fromUserId, toUserId));
+    }
+
     @GetMapping("/followers/{id}")
     public ResponseEntity<List<UserDTO>> getFollowers(@PathVariable final Long id) throws UserNotFoundException {
         return ResponseEntity.ok(followService.getFollowers(id));

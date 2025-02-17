@@ -50,5 +50,4 @@ public class PostEntity implements Serializable {
     private List<AccountEntity> usersSaved;
     @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private PostLocationEntity location;
-
 }

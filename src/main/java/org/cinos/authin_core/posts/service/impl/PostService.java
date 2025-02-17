@@ -79,6 +79,9 @@ public class PostService implements IPostService {
                     .dateTimeValue(getPostDateTimeValue(e.getPublicationDate()))
                     .imagesUrls(e.getImages().stream().map(PostImageEntity::getUrl).toList())
                     .currencySymbol(e.getCurrencySymbol())
+                    .location(postMapper.toLocationDTO(e.getLocation()))
+                    .kilometers(e.getKilometers())
+                    .userId(e.getUserAccount().getId())
                     .build();
         });
 
@@ -89,9 +92,7 @@ public class PostService implements IPostService {
         long years = Math.abs(ChronoUnit.YEARS.between(publicationDate, today));
         long months = Math.abs(ChronoUnit.MONTHS.between(publicationDate, today));
         long days = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
-        System.out.println(days);
         long hours = Math.abs(ChronoUnit.HOURS.between(publicationDate, today));
-        System.out.println(hours);
         long minutes = Math.abs(ChronoUnit.MINUTES.between(publicationDate, today));
         long seconds = Math.abs(ChronoUnit.SECONDS.between(publicationDate, today));
         if (days>=7 && days<14){
@@ -145,7 +146,6 @@ public class PostService implements IPostService {
                 .year(request.year())
                 .isUsed(request.isUsed())
                 .price(request.price())
-                .description(request.description())
                 .userAccount(accountService.getAccountEntityById(request.userId()))
                 .publicationDate(LocalDateTime.now())
                 .active(request.active())
@@ -159,6 +159,7 @@ public class PostService implements IPostService {
                 .build()).toList();
 
         PostLocationEntity location = PostLocationEntity.builder()
+                .address(request.location().address())
                 .lat(request.location().lat())
                 .lng(request.location().lng())
                 .post(postEntity)

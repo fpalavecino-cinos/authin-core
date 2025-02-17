@@ -13,4 +13,8 @@ public interface IAccountService {
     void incrementFollowers(Long toUserId);
     AccountDTO getUserLoggedAccount();
     AccountEntity getAccountEntityById(Long id) throws UserNotFoundException;
+
+    void decrementFollowings(Long fromUserId);
+    void decrementFollowers(Long fromUserId);
+
 }

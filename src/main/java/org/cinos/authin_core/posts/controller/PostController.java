@@ -6,7 +6,6 @@ import org.cinos.authin_core.posts.dto.PostFeedDTO;
 import org.cinos.authin_core.posts.dto.PostProfileDTO;
 import org.cinos.authin_core.posts.service.IPostService;
 import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
-import org.cinos.authin_core.users.entity.AccountEntity;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 

@@ -17,8 +17,11 @@ public interface PostMapper {
 
     @Mapping(source = "images", target = "imagesUrls", qualifiedByName = "mapImages")
     @Mapping(source = "userAccount", target = "userFullName", qualifiedByName = "mapUserFullName")
+    @Mapping(source = "userAccount", target = "userId", qualifiedByName = "mapUserId")
     @Mapping(source = "location", target = "location", qualifiedByName = "mapLocation")
+    @Mapping(source = "userAccount", target = "userAvatar", qualifiedByName = "mapUserAvatar")
     PostDTO toDTO(PostEntity post);
+    PostLocationDTO toLocationDTO(PostLocationEntity location);
 
     @Named("mapImages")
     default List<String> mapImages(List<PostImageEntity> images) {
@@ -26,7 +29,7 @@ public interface PostMapper {
             return new ArrayList<>();
         }
         return images.stream()
-                .map(PostImageEntity::getUrl) // Suponiendo que PostImageEntity tiene un método getUrl()
+                .map(PostImageEntity::getUrl)
                 .toList();
     }
 
@@ -40,12 +43,26 @@ public interface PostMapper {
         return (firstName + " " + lastName).trim();
     }
 
+    @Named("mapUserId")
+    default Long mapUserId(AccountEntity account) {
+        if (account == null) {
+            return null;
+        }
+        return account.getId();
+    }
+
     @Named("mapLocation")
     default PostLocationDTO mapLocation(PostLocationEntity location) {
         return PostLocationDTO.builder()
+                .address(location.getAddress())
                 .lat(location.getLat())
                 .lng(location.getLng())
                 .build();
+    }
+
+    @Named("mapUserAvatar")
+    default String mapUserAvatar(AccountEntity account) {
+        return account.getAvatarImg();
     }
 
 }

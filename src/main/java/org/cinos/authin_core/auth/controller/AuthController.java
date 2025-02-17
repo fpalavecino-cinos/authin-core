@@ -25,7 +25,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> register(@RequestBody final LoginRequest userCreateRequest) throws UserNotFoundException {
+    public ResponseEntity<LoginResponse> login(@RequestBody final LoginRequest userCreateRequest) throws UserNotFoundException {
         return ResponseEntity.ok(authService.login(userCreateRequest));
     }
 

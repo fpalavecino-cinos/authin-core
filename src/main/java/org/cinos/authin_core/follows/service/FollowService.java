@@ -71,4 +71,22 @@ public class FollowService implements IFollowService {
         }).toList();
     }
 
+    @Override
+    public Boolean isFollowing(final Long fromUserId, final Long toUserId) {
+        return followRepository.findByFromUserIdAndToUserId(fromUserId, toUserId, FollowDTO.class).isPresent();
+    }
+
+    @Override
+    public FollowDTO unfollowUser(Long fromUserId, Long toUserId) {
+        FollowEntity follow = followRepository.findByFromUserIdAndToUserId(fromUserId, toUserId)
+                .orElseThrow(() -> new RuntimeException("No se encontro la relacion de seguimiento"));
+
+        followRepository.delete(follow);
+
+        accountService.decrementFollowings(fromUserId);
+        accountService.decrementFollowers(toUserId);
+
+        return DTOConverter.toDTO(follow, FollowDTO.class);
+    }
+
 }

@@ -11,4 +11,8 @@ public interface IFollowService {
     FollowDTO followUser(Long fromUserId, Long toUserId) throws UserFollowingException, UserNotFoundException;
     List<UserDTO> getFollowers(Long id) throws UserNotFoundException;
     List<UserDTO> getFollowings(Long id) throws UserNotFoundException;
+
+    Boolean isFollowing(Long fromUserId, Long toUserId);
+
+    FollowDTO unfollowUser(Long fromUserId, Long toUserId);
 }
