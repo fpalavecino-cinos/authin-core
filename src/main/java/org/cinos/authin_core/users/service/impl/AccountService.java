@@ -2,9 +2,11 @@ package org.cinos.authin_core.users.service.impl;
 
 import org.cinos.authin_core.posts.entity.PostEntity;
 import org.cinos.authin_core.posts.service.impl.PostService;
+import org.cinos.authin_core.posts.service.impl.StorageService;
 import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.authin_core.users.dto.AccountDTO;
 import org.cinos.authin_core.users.dto.DTOConverter;
+import org.cinos.authin_core.users.dto.UpdateAccountDTO;
 import org.cinos.authin_core.users.entity.AccountEntity;
 import org.cinos.authin_core.users.entity.UserEntity;
 import org.cinos.authin_core.users.repository.AccountRepository;
@@ -15,12 +17,17 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
+    private final StorageService storageService;
 
     @Override
     public void createUserAccount(final UserEntity user) {
@@ -101,6 +108,21 @@ public class AccountService implements IAccountService {
         AccountEntity account = accountRepository.findById(toUserId).orElseThrow(()->new UsernameNotFoundException("Usuario no encontrado"));
         account.setFollowers(account.getFollowers() - 1);
         accountRepository.save(account);
+    }
+
+    @Override
+    public List<AccountEntity> findByUsernameContainingIgnoreCase(String username) {
+        return accountRepository.findByUser_UsernameContainingIgnoreCase(username);
+    }
+
+    @Override
+    public void updateUserAccount(final UpdateAccountDTO accountDTO, MultipartFile file) throws IOException {
+        AccountEntity accountEntity = accountRepository.findById(accountDTO.id()).orElseThrow(()->new UsernameNotFoundException("Usuario no encontrado"));
+        String avatarImgUrl = storageService.uploadFile(file);
+        accountEntity.getUser().setName(accountDTO.name());
+        accountEntity.getUser().setLastname(accountDTO.lastname());
+        accountEntity.setAvatarImg(avatarImgUrl);
+        accountRepository.save(accountEntity);
     }
 
 }

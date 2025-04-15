@@ -18,6 +18,6 @@ public class CommentEntity {
     private Long postId;
     private Long userId;
     private String content;
-    private LocalDateTime dateTime;
+    private LocalDateTime commentDate;
 
 }

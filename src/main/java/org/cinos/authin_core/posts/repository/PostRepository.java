@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface PostRepository extends JpaRepository<PostEntity, Long>, JpaSpecificationExecutor<PostEntity> {
 
     List<PostEntity> findByUserAccount_Id(Long userId);
-    List<PostEntity> findAllByUserAccount_Id(Long userId);
+    List<PostEntity> findAllByUserAccount_IdAndActiveTrue(Long userId);
     Page<PostEntity> findAllByUserAccount_IdInOrderByPublicationDateDesc(List<Long> usersId, Pageable pageable);
     <T> List<T>  findByUsersSaved_Id(Long userId);
 

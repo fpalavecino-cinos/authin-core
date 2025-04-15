@@ -37,6 +37,13 @@ public class StorageService {
         return fileUrls;
     }
 
+    public String uploadFile(MultipartFile file) throws IOException {
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Bucket bucket = storage.get(bucketName);
+            Blob blob = bucket.create(fileName, file.getBytes());
+        return blob.getMediaLink();
+    }
+
     public byte[] downloadFile(String fileName) throws IOException {
         Blob blob = storage.get(bucketName, fileName);
         return blob.getContent();

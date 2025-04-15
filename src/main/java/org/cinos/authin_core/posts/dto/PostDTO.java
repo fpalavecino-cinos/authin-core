@@ -1,5 +1,6 @@
 package org.cinos.authin_core.posts.dto;
 import lombok.Builder;
+import org.cinos.authin_core.technical_verification.dto.TechnicalVerificationDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,8 +16,6 @@ public record PostDTO(
         Long userId,
         LocalDateTime publicationDate,
         String userFullName,
-        String description,
-        Integer likes,
         Boolean active,
         String currencySymbol,
         String kilometers,
@@ -24,5 +23,7 @@ public record PostDTO(
         String transmission,
         PostLocationDTO location,
         List<String> imagesUrls,
-        String userAvatar) {
+        String userAvatar,
+        TechnicalVerificationDTO technicalVerification,
+        Boolean isVerified) {
 }

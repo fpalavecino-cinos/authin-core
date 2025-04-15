@@ -2,9 +2,7 @@ package org.cinos.authin_core.posts.dto.mapper;
 
 import org.cinos.authin_core.posts.dto.PostDTO;
 import org.cinos.authin_core.posts.dto.PostLocationDTO;
-import org.cinos.authin_core.posts.entity.PostEntity;
-import org.cinos.authin_core.posts.entity.PostImageEntity;
-import org.cinos.authin_core.posts.entity.PostLocationEntity;
+import org.cinos.authin_core.posts.entity.*;
 import org.cinos.authin_core.users.entity.AccountEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,6 +18,7 @@ public interface PostMapper {
     @Mapping(source = "userAccount", target = "userId", qualifiedByName = "mapUserId")
     @Mapping(source = "location", target = "location", qualifiedByName = "mapLocation")
     @Mapping(source = "userAccount", target = "userAvatar", qualifiedByName = "mapUserAvatar")
+    @Mapping(source = "technicalVerification", target = "technicalVerification")
     PostDTO toDTO(PostEntity post);
     PostLocationDTO toLocationDTO(PostLocationEntity location);
 
@@ -63,6 +62,15 @@ public interface PostMapper {
     @Named("mapUserAvatar")
     default String mapUserAvatar(AccountEntity account) {
         return account.getAvatarImg();
+    }
+
+    @Named("mapCarModel")
+    default String mapCarModel(ModelEntity model) {
+        return model.getName();
+    }
+    @Named("mapCarMake")
+    default String mapCarMake(MakeEntity make) {
+        return make.getName();
     }
 
 }

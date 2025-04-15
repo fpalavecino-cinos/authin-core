@@ -8,11 +8,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
@@ -79,6 +85,32 @@ public class GlobalExceptionHandler {
 
         log.error("{}: {}", message, e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(apiError);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidationException(HttpServletRequest req, MethodArgumentNotValidException ex) {
+        // Procesar errores
+        Map<String, String> errors = ex.getBindingResult().getFieldErrors().stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Error no especificado"
+                ));
+
+        // Construir mensaje principal
+        String errorSummary = errors.entrySet().stream()
+                .map(entry -> String.format("%s: %s", entry.getKey(), entry.getValue()))
+                .collect(Collectors.joining("; "));
+
+        // Construir respuesta
+        ApiError apiError = ApiError.builder()
+                .backendMessage("Validation error") // Más corto y genérico
+                .url(req.getRequestURL().toString())
+                .date(LocalDateTime.now()) // Formato consistente
+                .method(req.getMethod())
+                .message("Error de validación en los datos enviados: " + errorSummary)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
 

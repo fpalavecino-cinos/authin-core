@@ -16,7 +16,7 @@ import java.util.List;
 
 public interface IPostService {
     List<PostDTO> getPostPageable(Integer page, Integer size);
-    Page<PostFeedDTO> getFeedPosts(Long userId, Pageable pageable) throws UserNotFoundException;
+    Page<PostFeedDTO> getFeedPosts(Long userId, Pageable pageable, Double userLatitude, Double userLongitude) throws UserNotFoundException ;
     Page<PostDTO> getFollowingsPosts(Long userId, Pageable pageable) throws UserNotFoundException;
     PostDTO getById(Long id) throws PostNotFoundException;
     List<PostDTO> getByUserId(Long userId);
@@ -27,4 +27,7 @@ public interface IPostService {
     void saveUserPost(Long userId, Long postId) throws PostNotFoundException, UserNotFoundException;
     Boolean userSavedPost(Long userId, Long postId) throws PostNotFoundException, UserNotFoundException;
     void userUnsavePost(Long userId, Long postId) throws PostNotFoundException;
+    void deactivatePost(Long postId) throws PostNotFoundException;
+    void uploadDocumentation(Long postId, List<MultipartFile> files) throws PostNotFoundException, IOException;
+
 }

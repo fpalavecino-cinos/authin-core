@@ -7,9 +7,11 @@ import org.cinos.authin_core.users.entity.UserEntity;
 import org.cinos.authin_core.users.model.Role;
 import org.cinos.authin_core.users.repository.UserRepository;
 import org.cinos.authin_core.users.service.IUserService;
+import org.cinos.authin_core.users.utils.exceptions.DuplicateUserException;
 import org.cinos.authin_core.users.utils.exceptions.PasswordDontMatchException;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -53,9 +55,17 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public UserDTO createUser(UserCreateRequest request) throws PasswordDontMatchException {
+    public UserDTO createUser(UserCreateRequest request) throws PasswordDontMatchException, DuplicateUserException {
         passwordsMatch(request.password(), request.repeatPassword());
 
+        if (userRepository.existsByUsername(request.username())) {
+            throw new DuplicateUserException("El nombre de usuario ya está en uso");
+        }
+
+        // Verificar si el email ya existe
+        if (userRepository.existsByEmail(request.email())) {
+            throw new DuplicateUserException("El correo electrónico ya está en uso");
+        }
         UserEntity userEntity = UserEntity.builder()
                 .name(request.name())
                 .lastname(request.lastname())
@@ -64,9 +74,14 @@ public class UserService implements IUserService {
                 .password(passwordEncoder.encode(request.password()))
                 .role(Role.USER)
                 .build();
-        UserEntity userDB = userRepository.save(userEntity);
-        accountService.createUserAccount(userDB);
-        return DTOConverter.toDTO(userDB, UserDTO.class);
+
+        try {
+            UserEntity userDB = userRepository.save(userEntity);
+            accountService.createUserAccount(userDB);
+            return DTOConverter.toDTO(userDB, UserDTO.class);
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateUserException("Usuario o email ya existente");
+        }
     }
 
     @Override

@@ -3,6 +3,8 @@ package org.cinos.authin_core.posts.dto;
 import org.cinos.authin_core.posts.models.CurrencySymbol;
 import lombok.Builder;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Builder
@@ -16,9 +18,11 @@ public record PostFeedDTO(
         Boolean isUsed,
         String userFullName,
         Long userId,
-        String dateTimeValue,
+        LocalDateTime publicationDate,
         PostLocationDTO location,
         String kilometers,
-        List<String> imagesUrls
+        List<String> imagesUrls,
+        Boolean isVerified,
+        Boolean isApproved
 ) {
 }

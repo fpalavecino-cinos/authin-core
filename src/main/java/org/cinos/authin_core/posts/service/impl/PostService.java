@@ -1,23 +1,28 @@
 package org.cinos.authin_core.posts.service.impl;
 
+import org.cinos.authin_core.mail.models.SendEmailRequest;
+import org.cinos.authin_core.mail.service.MailService;
 import org.cinos.authin_core.posts.controller.request.PostCreateRequest;
 import org.cinos.authin_core.posts.dto.PostDTO;
 import org.cinos.authin_core.posts.dto.PostFeedDTO;
 import org.cinos.authin_core.posts.dto.PostProfileDTO;
 import org.cinos.authin_core.posts.dto.mapper.PostMapper;
-import org.cinos.authin_core.posts.entity.PostEntity;
-import org.cinos.authin_core.posts.entity.PostImageEntity;
-import org.cinos.authin_core.posts.entity.PostLocationEntity;
+import org.cinos.authin_core.posts.entity.*;
+import org.cinos.authin_core.posts.models.DocumentationStatus;
+import org.cinos.authin_core.posts.models.VerificationStatus;
 import org.cinos.authin_core.posts.repository.PostImageRepository;
 import org.cinos.authin_core.posts.repository.PostLocationRepository;
 import org.cinos.authin_core.posts.repository.PostRepository;
+import org.cinos.authin_core.technical_verification.repository.TechnicalVerificationRepository;
 import org.cinos.authin_core.posts.repository.specs.PostSpecifications;
+import org.cinos.authin_core.posts.service.IMakeService;
+import org.cinos.authin_core.posts.service.IModelService;
 import org.cinos.authin_core.posts.service.IPostService;
 import org.cinos.authin_core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.authin_core.follows.service.IFollowService;
+import org.cinos.authin_core.technical_verification.entity.TechnicalVerification;
 import org.cinos.authin_core.users.dto.UserDTO;
 import org.cinos.authin_core.users.service.impl.AccountService;
-import org.cinos.authin_core.users.service.impl.UserService;
 import org.cinos.authin_core.users.utils.exceptions.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,7 +34,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -38,14 +42,16 @@ public class PostService implements IPostService {
 
     private final PostRepository postRepository;
     private final IFollowService followService;
-//  private final KafkaTemplate<String, String> kafkaTemplate;
     private final String POST_NOT_FOUND = "La publicacion no se encontró";
-    private final UserService userService;
     private final StorageService storageService;
     private final PostImageRepository postImageRepository;
     private final PostLocationRepository postLocationRepository;
     private final AccountService accountService;
     private final PostMapper postMapper;
+    private final IMakeService makeService;
+    private final IModelService modelService;
+    private final MailService mailService;
+    private final TechnicalVerificationRepository technicalVerificationRepository;
 
     @Override
     public List<PostDTO> getPostPageable(Integer page, Integer size) {
@@ -54,20 +60,29 @@ public class PostService implements IPostService {
     }
 
     @Override
-    public Page<PostFeedDTO> getFeedPosts(Long userId, Pageable pageable) throws UserNotFoundException {
+    public Page<PostFeedDTO> getFeedPosts(
+            Long userId,
+            Pageable pageable,
+            Double userLatitude,
+            Double userLongitude
+    ) throws UserNotFoundException {
         List<UserDTO> followings = followService.getFollowings(userId);
         List<Long> followingsIds = followings.stream().map(UserDTO::id).toList();
-        Specification<PostEntity> spec = PostSpecifications.postsOfFollowingsOrAll(followingsIds,LocalDateTime.now().minusDays(30));
 
+        // Especificación con timeFactor, comentarios, ubicación y relación
+        Specification<PostEntity> spec = PostSpecifications.postFeedSpec(
+                followingsIds,
+                userLatitude,
+                userLongitude,
+                userId
+        );
+
+        // Obtener publicaciones paginadas y ordenadas por relevancia
         Page<PostEntity> postEntityPage = postRepository.findAll(spec, pageable);
 
-        return postEntityPage.map((e)-> {
-            String userFullName = "";
-            try {
-                userFullName = userService.getFullName(e.getUserAccount().getId());
-            } catch (UserNotFoundException ex) {
-                throw new RuntimeException(ex);
-            }
+        // Mapear a DTO
+        return postEntityPage.map((e) -> {
+            String userFullName = e.getUserAccount().getUser().getName() + " " + e.getUserAccount().getUser().getLastname();
             return PostFeedDTO.builder()
                     .id(e.getId())
                     .model(e.getModel())
@@ -76,46 +91,15 @@ public class PostService implements IPostService {
                     .make(e.getMake())
                     .isUsed(e.getIsUsed())
                     .userFullName(userFullName)
-                    .dateTimeValue(getPostDateTimeValue(e.getPublicationDate()))
+                    .publicationDate(e.getPublicationDate())
                     .imagesUrls(e.getImages().stream().map(PostImageEntity::getUrl).toList())
                     .currencySymbol(e.getCurrencySymbol())
                     .location(postMapper.toLocationDTO(e.getLocation()))
                     .kilometers(e.getKilometers())
                     .userId(e.getUserAccount().getId())
+                    .isVerified(e.getIsVerified())
                     .build();
         });
-
-    }
-
-    public String getPostDateTimeValue(LocalDateTime publicationDate){
-        LocalDateTime today = LocalDateTime.now();
-        long years = Math.abs(ChronoUnit.YEARS.between(publicationDate, today));
-        long months = Math.abs(ChronoUnit.MONTHS.between(publicationDate, today));
-        long days = Math.abs(ChronoUnit.DAYS.between(publicationDate, today));
-        long hours = Math.abs(ChronoUnit.HOURS.between(publicationDate, today));
-        long minutes = Math.abs(ChronoUnit.MINUTES.between(publicationDate, today));
-        long seconds = Math.abs(ChronoUnit.SECONDS.between(publicationDate, today));
-        if (days>=7 && days<14){
-            return "1 smn";
-        } else if (days>=14 && days<21){
-            return "2 smn";
-        } else if (days>=21 && days<28){
-            return "3 smn";
-        } else if (days > 0) {
-            return days + "d";
-        } else if (hours > 0) {
-            return hours + "h";
-        } else if (minutes > 0) {
-            return minutes + "mn";
-        } else if (seconds > 0){
-            return seconds + "s";
-        } else if (years > 0){
-            return years + "a";
-        } else if (months > 0) {
-            return months + "m";
-        } else {
-            return "now";
-        }
     }
 
     @Override
@@ -137,9 +121,12 @@ public class PostService implements IPostService {
 
     @Override
     public PostDTO createPost(PostCreateRequest request, List<MultipartFile> images) throws IOException, UserNotFoundException {
+        makeService.findByName(request.make()).orElseThrow(() -> new RuntimeException("Marca no encontrada"));
+        modelService.findByName(request.model()).orElseThrow(() -> new RuntimeException("Modelo no encontrado"));
+
         PostEntity postEntity = PostEntity.builder()
-                .make(request.make())
                 .model(request.model())
+                .make(request.make())
                 .kilometers(request.kilometers())
                 .fuel(request.fuel())
                 .transmission(request.transmission())
@@ -148,10 +135,15 @@ public class PostService implements IPostService {
                 .price(request.price())
                 .userAccount(accountService.getAccountEntityById(request.userId()))
                 .publicationDate(LocalDateTime.now())
-                .active(request.active())
+                .active(Boolean.TRUE)
                 .currencySymbol(request.currencySymbol())
+                .documentationStatus(DocumentationStatus.NOT_PROVIDED)
                 .build();
 
+        TechnicalVerification technicalVerification = TechnicalVerification.builder()
+                .post(postEntity)
+                .status(VerificationStatus.NOT_STARTED)
+                .build();
         List<String> imageUrls = storageService.uploadFiles(images);
         List<PostImageEntity> imagesEntity = imageUrls.stream().map(url -> PostImageEntity.builder()
                 .url(url)
@@ -168,6 +160,7 @@ public class PostService implements IPostService {
         postEntity.setImages(imagesEntity);
         postEntity.setLocation(location);
         postRepository.save(postEntity);
+        technicalVerificationRepository.save(technicalVerification);
         postImageRepository.saveAll(imagesEntity);
         postLocationRepository.save(location);
         return postMapper.toDTO(postEntity);
@@ -175,7 +168,7 @@ public class PostService implements IPostService {
 
     @Override
     public List<PostProfileDTO> getPostsProfile(Long userId) throws UserNotFoundException {
-        List<PostEntity> posts = postRepository.findAllByUserAccount_Id(userId);
+        List<PostEntity> posts = postRepository.findAllByUserAccount_IdAndActiveTrue(userId);
         return posts.stream().map(e -> PostProfileDTO.builder()
                 .id(e.getId())
                 .firstImage(e.getImages().get(0).getUrl())
@@ -188,7 +181,7 @@ public class PostService implements IPostService {
     }
 
     @Override
-    public List<PostProfileDTO> getSavedPostsProfile(final Long userId) throws UserNotFoundException {
+    public List<PostProfileDTO> getSavedPostsProfile(final Long userId) {
         List<PostEntity> posts = postRepository.findByUsersSaved_Id(userId);
         return posts.stream().map(e -> PostProfileDTO.builder()
                 .id(e.getId())
@@ -216,5 +209,32 @@ public class PostService implements IPostService {
         post.getUsersSaved().removeIf(e->e.getId().equals(userId));
         postRepository.save(post);
     }
+
+    @Override
+    public void deactivatePost(Long postId) throws PostNotFoundException {
+        PostEntity post = postRepository.findById(postId).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND));
+        post.setActive(Boolean.FALSE);
+        postRepository.save(post);
+    }
+
+    @Override
+    public void uploadDocumentation(Long postId, List<MultipartFile> files) throws PostNotFoundException {
+        PostEntity post = postRepository.findById(postId).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND));
+        String message = """
+                Se ha subido la documentación para la publicación de %s %s del año %s, %s km
+                """.formatted(post.getMake(), post.getModel(), post.getYear(), post.getKilometers());
+        SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
+                .to(new String[]{"fpalavecino@cinos.org"})
+                .subject("Documentación de publicación:" + post.getId())
+                .message(message)
+                .attachments(files)
+                .build();
+        try {
+            mailService.sendMail(sendEmailRequest);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al enviar el correo", e);
+        }
+    }
+
 
 }

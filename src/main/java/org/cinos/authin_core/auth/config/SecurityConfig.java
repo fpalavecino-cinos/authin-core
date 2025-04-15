@@ -35,7 +35,8 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exc -> exc.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // Permitir rutas públicas
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/health").permitAll()// Permitir rutas públicas
                         .anyRequest().authenticated() // Todo lo demás requiere autenticación
                 )
                 .build();

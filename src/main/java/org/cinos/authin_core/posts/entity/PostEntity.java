@@ -3,6 +3,9 @@ package org.cinos.authin_core.posts.entity;
 import org.cinos.authin_core.posts.models.CurrencySymbol;
 import jakarta.persistence.*;
 import lombok.*;
+import org.cinos.authin_core.posts.models.DocumentationStatus;
+import org.cinos.authin_core.posts.models.VerificationStatus;
+import org.cinos.authin_core.technical_verification.entity.TechnicalVerification;
 import org.cinos.authin_core.users.entity.AccountEntity;
 
 import java.io.Serializable;
@@ -31,13 +34,11 @@ public class PostEntity implements Serializable {
     private String kilometers;
     private String fuel;
     private String transmission;
-    private String description;
     @Column(name = "publication_date")
     private LocalDateTime publicationDate;
     @ManyToOne
     @JoinColumn(name = "account_id", nullable = false)
     private AccountEntity userAccount;
-    private Integer likes;
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImageEntity> images = new ArrayList<>();
     private Boolean active;
@@ -50,4 +51,10 @@ public class PostEntity implements Serializable {
     private List<AccountEntity> usersSaved;
     @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private PostLocationEntity location;
+    @OneToOne(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private TechnicalVerification technicalVerification;
+    @Enumerated(EnumType.STRING)
+    private DocumentationStatus documentationStatus;
+    private Boolean isVerified = (this.technicalVerification != null && this.technicalVerification.getStatus() == VerificationStatus.APPROVED);
+
 }
