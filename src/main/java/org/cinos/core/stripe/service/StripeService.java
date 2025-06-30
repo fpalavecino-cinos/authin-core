@@ -113,8 +113,13 @@ public class StripeService {
         userIdToSubscriptionId.put(userId, subscription.getId());
 
         Invoice invoice = subscription.getLatestInvoiceObject();
-        PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
-        return paymentIntent.getClientSecret();
+        PaymentIntent paymentIntent = invoice != null ? invoice.getPaymentIntentObject() : null;
+        if (paymentIntent != null) {
+            return paymentIntent.getClientSecret();
+        } else {
+            // No hay paymentIntent porque es trial puro, retorna null
+            return null;
+        }
     }
 
     /**

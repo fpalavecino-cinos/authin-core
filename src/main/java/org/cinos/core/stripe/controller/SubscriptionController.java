@@ -201,7 +201,15 @@ public class SubscriptionController {
                 email,
                 true // trial
             );
-            return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
+            if (clientSecret != null) {
+                return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
+            } else {
+                // Trial puro, sin pago inmediato
+                return ResponseEntity.ok(SubscriptionResponse.builder()
+                    .success(true)
+                    .message("Prueba gratuita activada. No se requiere pago hasta que termine el trial.")
+                    .build());
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder()
