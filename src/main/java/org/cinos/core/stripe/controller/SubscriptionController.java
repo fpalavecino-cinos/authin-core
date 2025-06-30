@@ -184,6 +184,34 @@ public class SubscriptionController {
     }
 
     /**
+     * Activa la prueba gratuita de 7 días para el usuario autenticado
+     */
+    @PostMapping("/trial")
+    public ResponseEntity<SubscriptionResponse> startTrial() {
+        try {
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            String userId = userEntity.getId().toString();
+            String email = userEntity.getEmail();
+
+            String clientSecret = stripeService.createSubscription(
+                "premium_monthly",
+                userId,
+                email,
+                true // trial
+            );
+            return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(SubscriptionResponse.builder()
+                            .message("Error: " + e.getMessage())
+                            .success(false)
+                            .build());
+        }
+    }
+
+    /**
      * Webhook para eventos de Stripe
      */
     @PostMapping("/webhook")
