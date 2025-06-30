@@ -215,4 +215,17 @@ public class UserService implements IUserService {
         pendingVerificationRepository.deleteAll(expired);
     }
 
+    /**
+     * Asigna el rol PREMIUM a un usuario si no lo tiene
+     */
+    @Transactional
+    public void assignPremiumRole(Long userId) throws UserNotFoundException {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException(USER_NOT_FOUND_MESSSAGE));
+        if (!user.getRoles().contains(Role.PREMIUM)) {
+            user.getRoles().add(Role.PREMIUM);
+            userRepository.save(user);
+        }
+    }
+
 }
