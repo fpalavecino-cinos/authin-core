@@ -5,6 +5,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.SetupIntent;
 import com.stripe.model.Subscription;
 import lombok.RequiredArgsConstructor;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
@@ -117,8 +118,8 @@ public class StripeService {
         if (paymentIntent != null) {
             return paymentIntent.getClientSecret();
         } else {
-            // No hay paymentIntent porque es trial puro, retorna null
-            return null;
+            // No hay PaymentIntent (no hay cobro inmediato), forzar recolección de tarjeta con SetupIntent
+            return createSetupIntent(userId, email);
         }
     }
 
@@ -155,5 +156,16 @@ public class StripeService {
     public boolean confirmPayment(String paymentIntentId) throws StripeException {
         PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
         return "succeeded".equals(paymentIntent.getStatus());
+    }
+
+    /**
+     * Crea un SetupIntent para forzar la recolección de tarjeta aunque sea trial
+     */
+    public String createSetupIntent(String userId, String email) throws StripeException {
+        String customerId = getOrCreateCustomer(userId, email);
+        Map<String, Object> params = new HashMap<>();
+        params.put("customer", customerId);
+        SetupIntent setupIntent = SetupIntent.create(params);
+        return setupIntent.getClientSecret();
     }
 }

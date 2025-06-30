@@ -204,10 +204,12 @@ public class SubscriptionController {
             if (clientSecret != null) {
                 return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
             } else {
-                // Trial puro, sin pago inmediato
+                // Trial puro, sin pago inmediato: forzar recolección de tarjeta con SetupIntent
+                String setupIntentSecret = stripeService.createSetupIntent(userId, email);
                 return ResponseEntity.ok(SubscriptionResponse.builder()
+                    .clientSecret(setupIntentSecret)
                     .success(true)
-                    .message("Prueba gratuita activada. No se requiere pago hasta que termine el trial.")
+                    .message("Prueba gratuita activada. Se requiere método de pago para continuar después del trial.")
                     .build());
             }
         } catch (Exception e) {
