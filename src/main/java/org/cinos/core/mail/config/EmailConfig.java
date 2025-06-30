@@ -14,12 +14,11 @@ import java.security.GeneralSecurityException;
 import java.util.Properties;
 
 @Configuration
-@PropertySource("classpath:email.properties")
 public class EmailConfig {
 
-    @Value("${email.username}")
+    @Value("${EMAIL_USERNAME}")
     private String EMAIL;
-    @Value("${email.password}")
+    @Value("${EMAIL_PASSWORD}")
     private String PASSWORD;
 
     private Properties getProperties() throws GeneralSecurityException {
