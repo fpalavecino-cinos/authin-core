@@ -33,3 +33,4 @@ build/
 .vscode/
 
 src/main/resources/authin-446020-4b361fe5ccb4.json
+src/main/resources/data.sql
