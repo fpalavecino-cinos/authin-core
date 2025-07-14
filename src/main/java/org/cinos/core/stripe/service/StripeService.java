@@ -5,13 +5,8 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
-import com.stripe.model.SetupIntent;
 import com.stripe.model.Subscription;
-import lombok.RequiredArgsConstructor;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
-import org.cinos.core.users.entity.UserEntity;
-import org.cinos.core.users.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +14,10 @@ import javax.annotation.PostConstruct;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class StripeService {
 
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
-    private final UserRepository userRepository;
 
     // Simulación de base de datos para ejemplo (reemplaza por tu repo real)
     private final Map<String, String> userIdToCustomerId = new HashMap<>();
@@ -70,21 +63,14 @@ public class StripeService {
      */
     private String getOrCreateCustomer(String userId, String email) throws StripeException {
         // Busca en tu base de datos real
-        Optional<UserEntity> userOpt = userRepository.findById(Long.valueOf(userId));
-        if (userOpt.isPresent()) {
-            UserEntity user = userOpt.get();
-            if (user.getStripeCustomerId() != null) {
-                return user.getStripeCustomerId();
+        if (userIdToCustomerId.containsKey(userId)) {
+            return userIdToCustomerId.get(userId);
         }
         Map<String, Object> params = new HashMap<>();
         params.put("email", email);
         Customer customer = Customer.create(params);
-            user.setStripeCustomerId(customer.getId());
-            userRepository.save(user);
+        userIdToCustomerId.put(userId, customer.getId());
         return customer.getId();
-        } else {
-            throw new RuntimeException("Usuario no encontrado para crear customer en Stripe");
-        }
     }
 
     /**
@@ -114,13 +100,8 @@ public class StripeService {
         userIdToSubscriptionId.put(userId, subscription.getId());
 
         Invoice invoice = subscription.getLatestInvoiceObject();
-        PaymentIntent paymentIntent = invoice != null ? invoice.getPaymentIntentObject() : null;
-        if (paymentIntent != null) {
+        PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
         return paymentIntent.getClientSecret();
-        } else {
-            // No hay PaymentIntent (no hay cobro inmediato), forzar recolección de tarjeta con SetupIntent
-            return createSetupIntent(userId, email);
-        }
     }
 
     /**
@@ -156,16 +137,5 @@ public class StripeService {
     public boolean confirmPayment(String paymentIntentId) throws StripeException {
         PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
         return "succeeded".equals(paymentIntent.getStatus());
-    }
-
-    /**
-     * Crea un SetupIntent para forzar la recolección de tarjeta aunque sea trial
-     */
-    public String createSetupIntent(String userId, String email) throws StripeException {
-        String customerId = getOrCreateCustomer(userId, email);
-        Map<String, Object> params = new HashMap<>();
-        params.put("customer", customerId);
-        SetupIntent setupIntent = SetupIntent.create(params);
-        return setupIntent.getClientSecret();
     }
 }

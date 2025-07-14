@@ -1,25 +1,15 @@
 package org.cinos.core.stripe.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.cinos.core.stripe.dto.CreateSubscriptionRequest;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
 import org.cinos.core.stripe.dto.SubscriptionResponse;
 import org.cinos.core.stripe.service.StripeService;
 import org.cinos.core.users.entity.UserEntity;
-import org.cinos.core.users.service.impl.UserService;
-import org.cinos.core.users.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import com.stripe.model.Event;
-import com.stripe.model.Invoice;
-import com.stripe.net.Webhook;
-import java.io.BufferedReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -29,14 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubscriptionController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SubscriptionController.class);
-
     private final StripeService stripeService;
-    private final UserService userService;
-    private final UserRepository userRepository;
-
-    @Value("${stripe.webhook.secret}")
-    private String endpointSecret;
 
     /**
      * Obtiene los planes de suscripción disponibles
@@ -185,92 +168,5 @@ public class SubscriptionController {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
         }
-    }
-
-    /**
-     * Activa la prueba gratuita de 7 días para el usuario autenticado
-     */
-    @PostMapping("/trial")
-    public ResponseEntity<SubscriptionResponse> startTrial() {
-        try {
-            // Obtener usuario autenticado
-            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
-            String userId = userEntity.getId().toString();
-            String email = userEntity.getEmail();
-
-            String clientSecret = stripeService.createSubscription(
-                "premium_monthly",
-                userId,
-                email,
-                true // trial
-            );
-            if (clientSecret != null) {
-                return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
-            } else {
-                // Trial puro, sin pago inmediato: forzar recolección de tarjeta con SetupIntent
-                String setupIntentSecret = stripeService.createSetupIntent(userId, email);
-                return ResponseEntity.ok(SubscriptionResponse.builder()
-                    .clientSecret(setupIntentSecret)
-                    .success(true)
-                    .message("Prueba gratuita activada. Se requiere método de pago para continuar después del trial.")
-                    .build());
-            }
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(SubscriptionResponse.builder()
-                            .message("Error: " + e.getMessage())
-                            .success(false)
-                            .build());
-        }
-    }
-
-    /**
-     * Webhook para eventos de Stripe
-     */
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
-        StringBuilder payload = new StringBuilder();
-        try (BufferedReader reader = request.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                payload.append(line);
-            }
-        } catch (Exception e) {
-            logger.error("[Stripe Webhook] Error leyendo el payload: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("");
-        }
-        String sigHeader = request.getHeader("Stripe-Signature");
-        Event event;
-        try {
-            event = Webhook.constructEvent(
-                    payload.toString(), sigHeader, endpointSecret
-            );
-        } catch (Exception e) {
-            logger.error("[Stripe Webhook] Error validando la firma: {}", e.getMessage(), e);
-            return ResponseEntity.status(400).body("");
-        }
-        logger.info("[Stripe Webhook] Evento recibido: {}", event.getType());
-        if ("invoice.payment_succeeded".equals(event.getType())) {
-            Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
-            if (invoice != null) {
-                String stripeCustomerId = invoice.getCustomer();
-                logger.info("[Stripe Webhook] Procesando invoice.payment_succeeded para customerId: {}", stripeCustomerId);
-                if (stripeCustomerId != null) {
-                    userRepository.findByStripeCustomerId(stripeCustomerId).ifPresentOrElse(user -> {
-                        try {
-                            logger.info("[Stripe Webhook] Usuario encontrado: {} (id: {})", user.getUsername(), user.getId());
-                            userService.assignPremiumRole(user.getId());
-                            logger.info("[Stripe Webhook] Rol PREMIUM asignado a usuario: {}", user.getUsername());
-                        } catch (Exception e) {
-                            logger.error("[Stripe Webhook] Error asignando rol premium: {}", e.getMessage(), e);
-                        }
-                    }, () -> {
-                        logger.warn("[Stripe Webhook] No se encontró usuario con stripeCustomerId: {}", stripeCustomerId);
-                    });
-                }
-            }
-        }
-        return ResponseEntity.ok("");
     }
 }
