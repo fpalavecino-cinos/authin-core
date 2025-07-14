@@ -7,7 +7,7 @@ if [ -z "$GCP_CREDENTIALS_BASE64" ]; then
 fi
 
 # Crear archivo de credenciales desde el base64
-echo "$GCP_CREDENTIALS_BASE64" | base64 -d > "$GOOGLE_CREDENTIALS_FILE"
+echo "$GCP_CREDENTIALS_BASE64" | base64 -d > "$GOOGLE_APPLICATION_CREDENTIALS"
 
 # Ejecutar la app
 exec java -jar app.jar

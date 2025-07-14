@@ -15,11 +15,11 @@ COPY --from=build /app/target/*.jar app.jar
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Variables de entorno
-ENV GOOGLE_CREDENTIALS_FILE=/app/credentials.json
+# Definir la ruta donde estará el archivo de credenciales
+ENV GOOGLE_APPLICATION_CREDENTIALS=/tmp/credentials.json
 
-# Exponer el puerto que usa Spring Boot
+# Exponer el puerto de Spring Boot
 EXPOSE 8080
 
-# Comando que corre el script de arranque (que genera el .json y ejecuta la app)
+# Ejecutar el script de arranque
 ENTRYPOINT ["/app/entrypoint.sh"]
