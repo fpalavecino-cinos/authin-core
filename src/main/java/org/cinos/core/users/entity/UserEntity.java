@@ -43,6 +43,9 @@ public class UserEntity implements UserDetails {
     private String verificationCode;
     private LocalDateTime verificationCodeExpiry;
 
+    @Column(unique = true, nullable = true)
+    private String stripeCustomerId;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();
