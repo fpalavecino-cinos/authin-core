@@ -8,6 +8,7 @@ import org.cinos.core.posts.service.IMakeService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,19 +25,23 @@ public class MakeService implements IMakeService {
     @Override
     public List<MakeDTO> findByNameContainingIgnoreCase(String name) {
         if (!StringUtils.hasText(name)){
-            return makeRepository.findAll().stream().map(e->
-                    MakeDTO.builder()
-                            .id(e.getId())
-                            .name(e.getName())
-                            .build()
-            ).toList();
+            return makeRepository.findAll().stream()
+                    .sorted(Comparator.comparing(MakeEntity::getName, String.CASE_INSENSITIVE_ORDER))
+                    .map(e->
+                            MakeDTO.builder()
+                                    .id(e.getId())
+                                    .name(e.getName())
+                                    .build()
+                    ).toList();
         }
 
-        return makeRepository.findByNameContainingIgnoreCase(name).stream().map(e->
-                MakeDTO.builder()
-                        .id(e.getId())
-                        .name(e.getName())
-                        .build()
-        ).toList();
+        return makeRepository.findByNameContainingIgnoreCase(name).stream()
+                .sorted(Comparator.comparing(MakeEntity::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(e->
+                        MakeDTO.builder()
+                                .id(e.getId())
+                                .name(e.getName())
+                                .build()
+                ).toList();
     }
 }

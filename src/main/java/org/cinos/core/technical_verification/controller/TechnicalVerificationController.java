@@ -2,10 +2,12 @@ package org.cinos.core.technical_verification.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.cinos.core.posts.dto.AcceptVerificationRequest;
+import org.cinos.core.posts.models.VerificationStatus;
 import org.cinos.core.technical_verification.dto.OrderVerificationRequest;
 import org.cinos.core.technical_verification.dto.TechnicalVerificationPercentsDTO;
 import org.cinos.core.technical_verification.dto.TechnicalVerificationRequest;
 import org.cinos.core.posts.utils.exceptions.PostNotFoundException;
+import org.cinos.core.technical_verification.dto.VerificationStatusResponse;
 import org.cinos.core.technical_verification.service.ITechnicalVerificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,5 +50,11 @@ public class TechnicalVerificationController {
     @GetMapping("/percents/{postId}")
     public ResponseEntity<TechnicalVerificationPercentsDTO> getPercentsByPostId(@PathVariable final Long postId) throws PostNotFoundException {
         return ResponseEntity.ok(technicalVerificationService.getPercentsByPostId(postId));
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/status/{postId}")
+    public ResponseEntity<VerificationStatusResponse> getStatusByPostId(@PathVariable final Long postId) throws PostNotFoundException {
+        return ResponseEntity.ok(technicalVerificationService.getStatusByPostId(postId));
     }
 }

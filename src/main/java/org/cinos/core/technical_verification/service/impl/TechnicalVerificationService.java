@@ -10,6 +10,7 @@ import org.cinos.core.posts.entity.PostEntity;
 import org.cinos.core.posts.models.VerificationStatus;
 import org.cinos.core.posts.repository.PostRepository;
 import org.cinos.core.posts.utils.exceptions.PostNotFoundException;
+import org.cinos.core.technical_verification.dto.VerificationStatusResponse;
 import org.cinos.core.technical_verification.entity.TechnicalVerification;
 import org.cinos.core.technical_verification.repository.TechnicalVerificationRepository;
 import org.cinos.core.technical_verification.service.ITechnicalVerificationService;
@@ -46,7 +47,7 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
                     <li>Teléfono: %s</li>
                     <li>Ubicación: %s</li>
                 </ul>
-        """.formatted(post.getMake(), post.getModel(), post.getYear(), post.getKilometers(), post.getTransmission(), post.getFuel(), user.getName(), user.getLastname(), user.getEmail(), user.getPhone(), post.getLocation().getAddress());
+        """.formatted(post.getMake(), post.getModel(), post.getYear(), post.getKilometers(), post.getTransmission(), post.getFuel(), orderVerificationRequest.userPhone(), user.getLastname(), user.getEmail(), user.getPhone(), post.getLocation().getAddress());
         SendEmailRequest sendEmailRequest = SendEmailRequest.builder()
                 .to(new String[]{"fpalavecino@cinos.org"})
                 .subject("Verificación pedida para la publicación " + post.getId())
@@ -193,6 +194,19 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
                 .paintAndBodyworkVerification(technicalVerification.getPaintAndBodyworkVerification().averageScore())
                 .suspensionAndSteeringVerification(technicalVerification.getSuspensionAndSteeringVerification().averageScore())
                 .tiresAndWheelsVerification(technicalVerification.getTiresAndWheelsVerification().averageScore())
+                .build();
+    }
+
+    @Override
+    public VerificationStatusResponse getStatusByPostId(Long postId) throws PostNotFoundException {
+        PostEntity post = postRepository.findById(postId).orElseThrow(() -> new PostNotFoundException("No se encontró la publicación con id " + postId));
+        return VerificationStatusResponse.builder()
+                .status(post.getTechnicalVerification().getStatus())
+                .isApproved(post.getTechnicalVerification().getIsApproved())
+                .sentToVerificationDate(post.getTechnicalVerification().getSentToVerificationDate())
+                .verificationAcceptedDate(post.getTechnicalVerification().getVerificationAcceptedDate())
+                .verificationAppointmentDate(post.getTechnicalVerification().getVerificationAppointmentDate())
+                .verificationMadeDate(post.getTechnicalVerification().getVerificationMadeDate())
                 .build();
     }
 

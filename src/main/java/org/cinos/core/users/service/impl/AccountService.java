@@ -88,6 +88,7 @@ public class AccountService implements IAccountService {
                 .followings(accountEntity.getFollowings())
                 .avatarImg(accountEntity.getAvatarImg())
                 .roles(accountEntity.getUser().getRoles().stream().map(role -> role.name()).toList())
+                .hasSeenRecommendationsModal( accountEntity.getUser().getHasSeenRecommendationsModal())
                 .build();
     }
 

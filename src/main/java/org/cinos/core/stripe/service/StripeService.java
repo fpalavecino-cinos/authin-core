@@ -75,13 +75,13 @@ public class StripeService {
             UserEntity user = userOpt.get();
             if (user.getStripeCustomerId() != null) {
                 return user.getStripeCustomerId();
-            }
-            Map<String, Object> params = new HashMap<>();
-            params.put("email", email);
-            Customer customer = Customer.create(params);
+        }
+        Map<String, Object> params = new HashMap<>();
+        params.put("email", email);
+        Customer customer = Customer.create(params);
             user.setStripeCustomerId(customer.getId());
             userRepository.save(user);
-            return customer.getId();
+        return customer.getId();
         } else {
             throw new RuntimeException("Usuario no encontrado para crear customer en Stripe");
         }
@@ -116,7 +116,7 @@ public class StripeService {
         Invoice invoice = subscription.getLatestInvoiceObject();
         PaymentIntent paymentIntent = invoice != null ? invoice.getPaymentIntentObject() : null;
         if (paymentIntent != null) {
-            return paymentIntent.getClientSecret();
+        return paymentIntent.getClientSecret();
         } else {
             // No hay PaymentIntent (no hay cobro inmediato), forzar recolección de tarjeta con SetupIntent
             return createSetupIntent(userId, email);

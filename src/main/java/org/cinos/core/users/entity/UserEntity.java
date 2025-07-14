@@ -46,6 +46,21 @@ public class UserEntity implements UserDetails {
     @Column(unique = true, nullable = true)
     private String stripeCustomerId;
 
+    @Column(name = "has_seen_recommendations_modal")
+    private Boolean hasSeenRecommendationsModal = false;
+
+    @Column(name = "preferred_brand")
+    private String preferredBrand;
+
+    @Column(name = "wants_used_cars")
+    private Boolean wantsUsedCars;
+
+    @Column(name = "wants_new_cars")
+    private Boolean wantsNewCars;
+
+    @Column(name = "use_location_for_recommendations")
+    private Boolean useLocationForRecommendations;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>();

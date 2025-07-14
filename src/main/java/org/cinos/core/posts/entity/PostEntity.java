@@ -56,5 +56,8 @@ public class PostEntity implements Serializable {
     @Enumerated(EnumType.STRING)
     private DocumentationStatus documentationStatus;
     private Boolean isVerified = (this.technicalVerification != null && this.technicalVerification.getStatus() == VerificationStatus.APPROVED);
+    private Integer hp;
+    private String motor;
+    private String traccion;
 
 }

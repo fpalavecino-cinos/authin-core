@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ISearchService {
     List<SearchResultDTO> search(String query);
+    List<SearchResultDTO> searchUsers(String query);
 }

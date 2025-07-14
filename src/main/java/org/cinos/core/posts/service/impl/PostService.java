@@ -36,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.cinos.core.users.service.impl.UserService;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +54,7 @@ public class PostService implements IPostService {
     private final IModelService modelService;
     private final MailService mailService;
     private final TechnicalVerificationRepository technicalVerificationRepository;
+    private final UserService userService;
 
     @Override
     public List<PostDTO> getPostPageable(Integer page, Integer size) {
@@ -70,12 +72,23 @@ public class PostService implements IPostService {
         List<UserDTO> followings = followService.getFollowings(userId);
         List<Long> followingsIds = followings.stream().map(UserDTO::id).toList();
 
-        // Especificación con timeFactor, comentarios, ubicación y relación
+        // Obtener preferencias del usuario
+        var user = userService.getByIdEntity(userId);
+        String preferredBrand = user.getPreferredBrand();
+        Boolean wantsUsedCars = user.getWantsUsedCars();
+        Boolean wantsNewCars = user.getWantsNewCars();
+        Boolean useLocationForRecommendations = user.getUseLocationForRecommendations();
+
+        // Especificación con timeFactor, comentarios, ubicación, relación y preferencias
         Specification<PostEntity> spec = PostSpecifications.postFeedSpec(
                 followingsIds,
                 userLatitude,
                 userLongitude,
-                userId
+                userId,
+                preferredBrand,
+                wantsUsedCars,
+                wantsNewCars,
+                useLocationForRecommendations
         );
 
         // Obtener publicaciones paginadas y ordenadas por relevancia
@@ -112,6 +125,8 @@ public class PostService implements IPostService {
 
     @Override
     public PostDTO getById(Long id) throws PostNotFoundException {
+        PostEntity postEntity = postRepository.findById(id).orElseThrow(() -> new PostNotFoundException(POST_NOT_FOUND));
+        PostDTO dto = postMapper.toDTO(postRepository.findById(id).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND)));
         return postMapper.toDTO(postRepository.findById(id).orElseThrow(()->new PostNotFoundException(POST_NOT_FOUND)));
     }
 
@@ -139,6 +154,9 @@ public class PostService implements IPostService {
                 .active(Boolean.TRUE)
                 .currencySymbol(request.currencySymbol())
                 .documentationStatus(DocumentationStatus.NOT_PROVIDED)
+                .hp(request.hp())
+                .motor(request.motor())
+                .traccion(request.traccion())
                 .build();
 
         TechnicalVerification technicalVerification = TechnicalVerification.builder()
@@ -243,5 +261,16 @@ public class PostService implements IPostService {
         return postPage.map(postMapper::toDTO);
     }
 
+    @Override
+    public List<PostDTO> searchPosts(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        
+        List<PostEntity> posts = postRepository.searchPosts(query.trim());
+        return posts.stream()
+                .map(postMapper::toDTO)
+                .toList();
+    }
 
 }

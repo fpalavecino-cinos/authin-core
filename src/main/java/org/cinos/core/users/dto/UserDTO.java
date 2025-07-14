@@ -12,4 +12,10 @@ String lastname,
 String email,
 String phone,
 Boolean active,
-List<Role> roles) { }
+List<Role> roles,
+Boolean hasSeenRecommendationsModal,
+String preferredBrand,
+Boolean wantsUsedCars,
+Boolean wantsNewCars,
+Boolean useLocationForRecommendations
+) { }

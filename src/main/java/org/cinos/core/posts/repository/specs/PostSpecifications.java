@@ -17,16 +17,38 @@ public class PostSpecifications {
             List<Long> followingsIds,
             Double userLatitude,
             Double userLongitude,
-            Long currentUserId
+            Long currentUserId,
+            String preferredBrand,
+            Boolean wantsUsedCars,
+            Boolean wantsNewCars,
+            Boolean useLocationForRecommendations
     ) {
         return (root, query, criteriaBuilder) -> {
             var accountJoin = root.join("userAccount");
 
+            List<Predicate> predicates = new ArrayList<>();
             // 1. Predicados base
             Predicate excludeCurrentUserPredicate = criteriaBuilder.notEqual(
                     accountJoin.get("id"), currentUserId
             );
             Predicate activePostsPredicate = criteriaBuilder.isTrue(root.get("active"));
+            predicates.add(excludeCurrentUserPredicate);
+            predicates.add(activePostsPredicate);
+
+            // Preferencia de marca
+            if (preferredBrand != null && !preferredBrand.isEmpty()) {
+                predicates.add(criteriaBuilder.equal(root.get("make"), preferredBrand));
+            }
+            // Preferencia de usados/nuevos
+            if (Boolean.TRUE.equals(wantsUsedCars) && !Boolean.TRUE.equals(wantsNewCars)) {
+                predicates.add(criteriaBuilder.isTrue(root.get("isUsed")));
+            } else if (!Boolean.TRUE.equals(wantsUsedCars) && Boolean.TRUE.equals(wantsNewCars)) {
+                predicates.add(criteriaBuilder.isFalse(root.get("isUsed")));
+            }
+            // Preferencia de ubicación: si no quiere usar ubicación, ignorar proximityScore
+            boolean useLocation = Boolean.TRUE.equals(useLocationForRecommendations)
+                && userLatitude != null && userLongitude != null
+                && userLatitude != 0.0 && userLongitude != 0.0;
 
             // --- Cálculo de relevancia ---
             // Factor de tiempo
@@ -61,9 +83,9 @@ public class PostSpecifications {
                             criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lng"), userLongitude), 2)
                     )
             );
-            Expression<Double> proximityScore = criteriaBuilder.toDouble(
+            Expression<Double> proximityScore = useLocation ? criteriaBuilder.toDouble(
                     criteriaBuilder.quot(1.0, criteriaBuilder.sum(distance, 1))
-            );
+            ) : criteriaBuilder.literal(1.0);
 
             // Factor de verificación (nuevo)
             Expression<Double> verificationFactor = criteriaBuilder.<Double>selectCase()
@@ -101,10 +123,7 @@ public class PostSpecifications {
             // Ordenar por relevancia
             query.orderBy(criteriaBuilder.desc(relevanceScore));
 
-            return criteriaBuilder.and(
-                    excludeCurrentUserPredicate,
-                    activePostsPredicate
-            );
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
 

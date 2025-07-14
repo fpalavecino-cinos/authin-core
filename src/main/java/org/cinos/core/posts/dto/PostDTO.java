@@ -25,5 +25,8 @@ public record PostDTO(
         List<String> imagesUrls,
         String userAvatar,
         TechnicalVerificationDTO technicalVerification,
-        Boolean isVerified) {
+        Boolean isVerified,
+        Integer hp,
+        String motor,
+        String traccion) {
 }

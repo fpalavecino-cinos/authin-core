@@ -1,0 +1,140 @@
+-- Script completo de marcas y modelos de autos del mercado argentino
+-- PARTE 1: Marcas A-C
+
+-- ALFA ROMEO
+INSERT IGNORE INTO MAKES (name) VALUES ('Alfa Romeo');
+INSERT IGNORE INTO MODELS (make_id, name) 
+SELECT m.id, '147' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, '156' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, '159' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, '166' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, 'Brera' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, 'Giulietta' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, 'Giulia' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, 'Stelvio' FROM MAKES m WHERE m.name = 'Alfa Romeo'
+UNION ALL SELECT m.id, 'Tonale' FROM MAKES m WHERE m.name = 'Alfa Romeo';
+
+-- AUDI
+INSERT IGNORE INTO MAKES (name) VALUES ('Audi');
+INSERT IGNORE INTO MODELS (make_id, name) 
+SELECT m.id, 'A1' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A3' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A4' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A5' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A6' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A7' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'A8' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'Q2' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'Q3' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'Q5' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'Q7' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'Q8' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'TT' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'TTS' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'TT RS' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'RS3' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'RS4' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'RS5' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'RS6' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'RS7' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S3' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S4' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S5' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S6' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S7' FROM MAKES m WHERE m.name = 'Audi'
+UNION ALL SELECT m.id, 'S8' FROM MAKES m WHERE m.name = 'Audi';
+
+-- BMW
+INSERT IGNORE INTO MAKES (name) VALUES ('BMW');
+INSERT IGNORE INTO MODELS (make_id, name) 
+SELECT m.id, 'Serie 1' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 2' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 3' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 4' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 5' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 6' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 7' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Serie 8' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X1' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X2' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X3' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X4' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X5' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X6' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X7' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'Z4' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'i3' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'i4' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'i7' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'iX' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'M2' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'M3' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'M4' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'M5' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'M8' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X3 M' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X4 M' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X5 M' FROM MAKES m WHERE m.name = 'BMW'
+UNION ALL SELECT m.id, 'X6 M' FROM MAKES m WHERE m.name = 'BMW';
+
+-- CHEVROLET
+INSERT IGNORE INTO MAKES (name) VALUES ('Chevrolet');
+INSERT IGNORE INTO MODELS (make_id, name) 
+SELECT m.id, 'Agile' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Aveo' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Cobalt' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Cruze' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Onix' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Prisma' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Spin' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Tracker' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Trailblazer' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'S10' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Montana' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Classic' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Corsa' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Celta' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Meriva' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Vectra' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Astra' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Zafira' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Captiva' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Blazer' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Colorado' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Silverado' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Camaro' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Corvette' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Malibu' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Impala' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Sonic' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Spark' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Beat' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Sail' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Enjoy' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Groove' FROM MAKES m WHERE m.name = 'Chevrolet'
+UNION ALL SELECT m.id, 'Seeker' FROM MAKES m WHERE m.name = 'Chevrolet';
+
+-- CITROËN
+INSERT IGNORE INTO MAKES (name) VALUES ('Citroën');
+INSERT IGNORE INTO MODELS (make_id, name) 
+SELECT m.id, 'C3' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C3 Aircross' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C4' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C4 Cactus' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C4 Picasso' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C5' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C5 Aircross' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'Berlingo' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C-Elysee' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C1' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C2' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C6' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'DS3' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'DS4' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'DS5' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'Jumpy' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'Jumper' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'Nemo' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'C-Zero' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'E-C4' FROM MAKES m WHERE m.name = 'Citroën'
+UNION ALL SELECT m.id, 'E-Berlingo' FROM MAKES m WHERE m.name = 'Citroën'; 

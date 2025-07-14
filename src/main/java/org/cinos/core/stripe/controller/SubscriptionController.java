@@ -18,6 +18,8 @@ import com.stripe.model.Event;
 import com.stripe.model.Invoice;
 import com.stripe.net.Webhook;
 import java.io.BufferedReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -26,6 +28,8 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class SubscriptionController {
+
+    private static final Logger logger = LoggerFactory.getLogger(SubscriptionController.class);
 
     private final StripeService stripeService;
     private final UserService userService;
@@ -233,6 +237,7 @@ public class SubscriptionController {
                 payload.append(line);
             }
         } catch (Exception e) {
+            logger.error("[Stripe Webhook] Error leyendo el payload: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body("");
         }
         String sigHeader = request.getHeader("Stripe-Signature");
@@ -242,19 +247,26 @@ public class SubscriptionController {
                     payload.toString(), sigHeader, endpointSecret
             );
         } catch (Exception e) {
+            logger.error("[Stripe Webhook] Error validando la firma: {}", e.getMessage(), e);
             return ResponseEntity.status(400).body("");
         }
+        logger.info("[Stripe Webhook] Evento recibido: {}", event.getType());
         if ("invoice.payment_succeeded".equals(event.getType())) {
             Invoice invoice = (Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
             if (invoice != null) {
                 String stripeCustomerId = invoice.getCustomer();
+                logger.info("[Stripe Webhook] Procesando invoice.payment_succeeded para customerId: {}", stripeCustomerId);
                 if (stripeCustomerId != null) {
-                    userRepository.findByStripeCustomerId(stripeCustomerId).ifPresent(user -> {
+                    userRepository.findByStripeCustomerId(stripeCustomerId).ifPresentOrElse(user -> {
                         try {
+                            logger.info("[Stripe Webhook] Usuario encontrado: {} (id: {})", user.getUsername(), user.getId());
                             userService.assignPremiumRole(user.getId());
+                            logger.info("[Stripe Webhook] Rol PREMIUM asignado a usuario: {}", user.getUsername());
                         } catch (Exception e) {
-                            // Loguea el error pero responde 200 a Stripe
+                            logger.error("[Stripe Webhook] Error asignando rol premium: {}", e.getMessage(), e);
                         }
+                    }, () -> {
+                        logger.warn("[Stripe Webhook] No se encontró usuario con stripeCustomerId: {}", stripeCustomerId);
                     });
                 }
             }

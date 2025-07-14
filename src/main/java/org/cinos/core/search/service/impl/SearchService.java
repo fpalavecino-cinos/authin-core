@@ -26,4 +26,15 @@ public class SearchService implements ISearchService {
 
         return results;
     }
+
+    @Override
+    public List<SearchResultDTO> searchUsers(String query) {
+        List<SearchResultDTO> results = new ArrayList<>();
+
+        // Buscar solo usuarios
+        List<AccountEntity> users = accountService.findByUsernameContainingIgnoreCase(query);
+        users.forEach(user -> results.add(new SearchResultDTO(user.getId(), user.getUser().getUsername(), user.getAvatarImg(), "user")));
+
+        return results;
+    }
 }

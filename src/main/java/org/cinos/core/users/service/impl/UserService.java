@@ -4,6 +4,7 @@ import org.apache.coyote.BadRequestException;
 import org.cinos.core.mail.models.SendEmailRequest;
 import org.cinos.core.mail.service.MailService;
 import org.cinos.core.users.controller.request.UserCreateRequest;
+import org.cinos.core.users.controller.request.RecommendationsPreferencesRequest;
 import org.cinos.core.users.dto.DTOConverter;
 import org.cinos.core.users.dto.UserDTO;
 import org.cinos.core.users.dto.VerifyCodeRequest;
@@ -127,7 +128,7 @@ public class UserService implements IUserService {
     public UserDTO getLoggedUser(){
         UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         UserEntity userEntity = (UserEntity) authentication.getPrincipal();
-        return DTOConverter.toDTO(userEntity, UserDTO.class);
+        return userMapper.toDTO(userEntity);
     }
 
     @Override
@@ -193,6 +194,19 @@ public class UserService implements IUserService {
         return VerifyCodeResponse.builder()
                 .isValid(Boolean.TRUE)
                 .build();
+    }
+
+    @Override
+    public UserDTO updateRecommendationsPreferences(RecommendationsPreferencesRequest request) {
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        userEntity.setPreferredBrand(request.preferredBrand());
+        userEntity.setWantsUsedCars(request.wantsUsedCars());
+        userEntity.setWantsNewCars(request.wantsNewCars());
+        userEntity.setUseLocationForRecommendations(request.useLocationForRecommendations());
+        userEntity.setHasSeenRecommendationsModal(true);
+        userRepository.save(userEntity);
+        return DTOConverter.toDTO(userEntity, UserDTO.class);
     }
 
     private void passwordsMatch(String password, String repeatPassword) throws PasswordDontMatchException {

@@ -19,5 +19,8 @@ public record PostCreateRequest(
         Boolean active,
         String kilometers,
         PostLocationDTO location,
-        CurrencySymbol currencySymbol) implements Serializable {
+        CurrencySymbol currencySymbol,
+        Integer hp,
+        String motor,
+        String traccion) implements Serializable {
 }

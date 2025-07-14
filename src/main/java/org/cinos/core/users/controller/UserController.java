@@ -3,6 +3,7 @@ package org.cinos.core.users.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.coyote.BadRequestException;
 import org.cinos.core.users.controller.request.UserCreateRequest;
+import org.cinos.core.users.controller.request.RecommendationsPreferencesRequest;
 import org.cinos.core.users.dto.*;
 import org.cinos.core.users.service.IAccountService;
 import org.cinos.core.users.service.IUserService;
@@ -72,6 +73,12 @@ public class UserController {
         UpdateAccountDTO accountDTO = objectMapper.readValue(account, UpdateAccountDTO.class);
         accountService.updateUserAccount(accountDTO, image);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PatchMapping("/recommendations-preferences")
+    public ResponseEntity<UserDTO> updateRecommendationsPreferences(@RequestBody RecommendationsPreferencesRequest request) {
+        return ResponseEntity.ok(userService.updateRecommendationsPreferences(request));
     }
 
     @PostMapping("/send-verification-code/{email}")

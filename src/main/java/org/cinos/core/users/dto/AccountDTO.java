@@ -15,5 +15,7 @@ public record AccountDTO(
         Long followers,
         Long followings,
         String avatarImg,
-        List<String> roles) {
+        List<String> roles,
+        Boolean hasSeenRecommendationsModal
+        ) {
 }

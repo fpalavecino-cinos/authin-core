@@ -19,6 +19,9 @@ public interface PostMapper {
     @Mapping(source = "location", target = "location", qualifiedByName = "mapLocation")
     @Mapping(source = "userAccount", target = "userAvatar", qualifiedByName = "mapUserAvatar")
     @Mapping(source = "technicalVerification", target = "technicalVerification")
+    @Mapping(source = "hp", target = "hp")
+    @Mapping(source = "traccion", target = "traccion")
+    @Mapping(source = "motor", target = "motor")
     PostDTO toDTO(PostEntity post);
     PostLocationDTO toLocationDTO(PostLocationEntity location);
 

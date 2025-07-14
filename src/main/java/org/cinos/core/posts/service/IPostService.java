@@ -31,5 +31,6 @@ public interface IPostService {
     void deactivatePost(Long postId) throws PostNotFoundException;
     void uploadDocumentation(Long postId, List<MultipartFile> files) throws PostNotFoundException, IOException;
     Page<PostDTO> getPostsFilter(PostFilterDTO postFilterDTO);
+    List<PostDTO> searchPosts(String query);
 
 }
