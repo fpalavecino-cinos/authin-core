@@ -5,7 +5,10 @@ import org.cinos.core.stripe.dto.CreateSubscriptionRequest;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
 import org.cinos.core.stripe.dto.SubscriptionResponse;
 import org.cinos.core.stripe.service.StripeService;
+import org.cinos.core.users.entity.UserEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,7 +48,18 @@ public class SubscriptionController {
                                 .build());
             }
 
-            String clientSecret = stripeService.createSubscription(request.getPlanId());
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            String userId = userEntity.getId().toString();
+            String email = userEntity.getEmail();
+
+            String clientSecret = stripeService.createSubscription(
+                request.getPlanId(),
+                userId,
+                email,
+                request.isTrial()
+            );
             return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
