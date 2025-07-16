@@ -14,6 +14,12 @@ import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import java.util.Collections;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -31,6 +37,32 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid final LoginRequest userCreateRequest) throws UserNotFoundException {
         return ResponseEntity.ok(authService.login(userCreateRequest));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<LoginResponse> googleLogin(@RequestBody Map<String, String> body) {
+        String idTokenString = body.get("idToken");
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    JacksonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList("681995243192-62r1eas03j9u2dgg40h136pfsh6fokq0.apps.googleusercontent.com")) // <-- PON TU CLIENT_ID
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                String email = payload.getEmail();
+                String name = (String) payload.get("name");
+                String pictureUrl = (String) payload.get("picture");
+                LoginResponse loginResponse = authService.loginWithGoogle(email, name, pictureUrl);
+                return ResponseEntity.ok(loginResponse);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @GetMapping("/refresh")

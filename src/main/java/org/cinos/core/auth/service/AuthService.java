@@ -5,6 +5,8 @@ import org.cinos.core.auth.controller.response.LoginResponse;
 import org.cinos.core.auth.controller.response.RegisterResponse;
 import org.cinos.core.users.controller.request.UserCreateRequest;
 import org.cinos.core.users.dto.UserDTO;
+import org.cinos.core.users.dto.mapper.UserMapper;
+import org.cinos.core.users.repository.UserRepository;
 import org.cinos.core.users.service.impl.UserService;
 import org.cinos.core.users.utils.exceptions.DuplicateUserException;
 import org.cinos.core.users.utils.exceptions.PasswordDontMatchException;
@@ -14,6 +16,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.cinos.core.users.entity.UserEntity;
+import org.cinos.core.users.model.Role;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +28,8 @@ public class AuthService {
     private final UserService userService;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     public RegisterResponse register(final UserCreateRequest userCreateRequest) throws PasswordDontMatchException, DuplicateUserException {
         final UserDTO userDTO = userService.createUser(userCreateRequest);
@@ -52,6 +60,37 @@ public class AuthService {
                 .username(user.username())
                 .email(user.email())
                 .roles(user.roles().stream().map(Enum::name).toList())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    public LoginResponse loginWithGoogle(String email, String name, String pictureUrl) {
+        Optional<UserEntity> userOpt = userRepository.findByEmail(email);
+        UserEntity user;
+        if (userOpt.isPresent()) {
+            user = userOpt.get();
+        } else {
+            user = UserEntity.builder()
+                    .email(email)
+                    .username(email) // O genera uno único
+                    .name(name)
+                    .roles(List.of(Role.USER))
+                    .password("") // No password para Google
+                    .active(true)
+                    .build();
+            user = userRepository.save(user);
+            // Si tienes lógica para crear Account, llámala aquí
+        }
+        var userDTO = userMapper.toDTO(user);
+        String accessToken = jwtService.generateToken(userDTO);
+        String refreshToken = jwtService.generateRefreshToken(userDTO);
+        return LoginResponse.builder()
+                .name(user.getName())
+                .lastname(user.getLastname())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .roles(user.getRoles().stream().map(Enum::name).toList())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
