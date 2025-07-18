@@ -1,7 +1,9 @@
 package org.cinos.core.stripe.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedReader;
+import java.util.ArrayList;
 import java.util.List;
 import org.cinos.core.stripe.dto.StripeInvoicePayment;
 
@@ -261,88 +264,98 @@ public class SubscriptionController {
      */
     @PostMapping("/webhook")
     public ResponseEntity<String> handleStripeWebhook(
-        @RequestBody String payload,
-        @RequestHeader("Stripe-Signature") String sigHeader
+            @RequestBody String payload,
+            @RequestHeader("Stripe-Signature") String sigHeader
     ) {
         System.out.println("[DEBUG] Payload length: " + payload.length());
-        System.out.println("[DEBUG] Payload start: " + (payload.length() > 100 ? payload.substring(0, 100) : payload));
-        System.out.println("Webhook received - Event type: " + sigHeader);
-        System.out.println("Stripe endpointSecret in use: " + endpointSecret);
+        System.out.println("[DEBUG] Signature: " + sigHeader);
+        System.out.println("[DEBUG] endpointSecret: " + endpointSecret);
+
         Event event;
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
-            System.out.println("Webhook event constructed successfully: " + event.getType());
+            System.out.println("✅ Webhook verificado: " + event.getType());
         } catch (Exception e) {
-            System.err.println("Error constructing webhook event: " + e.getMessage());
+            System.err.println("❌ Firma inválida: " + e.getMessage());
             return ResponseEntity.badRequest().body("Invalid signature");
         }
-        if ("checkout.session.completed".equals(event.getType())) {
-            System.out.println("Processing checkout.session.completed event");
+
+        String eventType = event.getType();
+
+        if ("checkout.session.completed".equals(eventType)) {
+            System.out.println("➡️ Evento: checkout.session.completed");
+
             Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
             if (session != null) {
                 String email = session.getCustomerDetails().getEmail();
-                System.out.println("Customer email from session: " + email);
-                // NO actualizar rol aquí, solo logging
+                System.out.println("Email cliente: " + email);
+                // No se actualiza rol aquí, solo logging
             } else {
-                System.err.println("Session object is null");
+                System.err.println("❌ Session es null");
             }
-        } else if ("invoice.payment_succeeded".equals(event.getType()) || "invoice_payment.paid".equals(event.getType())) {
-            System.out.println("Processing payment success event: " + event.getType());
-            Object dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
+
+        } else if ("invoice.payment_succeeded".equals(eventType) || "invoice_payment.paid".equals(eventType)) {
+            System.out.println("➡️ Evento: " + eventType);
+
+            // Si el objeto no se puede deserializar automáticamente, lo parseamos manualmente
+            EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+
             String invoiceId = null;
-            System.out.println("dataObject class: " + (dataObject != null ? dataObject.getClass().getName() : "null"));
-            System.out.println("dataObject toString: " + (dataObject != null ? dataObject.toString() : "null"));
-            if (dataObject instanceof com.stripe.model.Invoice) {
-                invoiceId = ((com.stripe.model.Invoice) dataObject).getId();
-            } else if (dataObject != null) {
-                try {
-                    // Si es un Map (LinkedHashMap), intenta obtener el campo "id"
-                    if (dataObject instanceof java.util.Map) {
-                        Object idObj = ((java.util.Map<?, ?>) dataObject).get("id");
-                        if (idObj != null) {
-                            invoiceId = idObj.toString();
-                        }
-                    } else {
-                        // Intentar reflexión como antes
-                        java.lang.reflect.Method getInvoice = dataObject.getClass().getMethod("getInvoice");
-                        invoiceId = (String) getInvoice.invoke(dataObject);
+            try {
+                if (deserializer.getObject().isPresent()) {
+                    Object dataObject = deserializer.getObject().get();
+                    if (dataObject instanceof com.stripe.model.Invoice) {
+                        invoiceId = ((com.stripe.model.Invoice) dataObject).getId();
                     }
-                } catch (Exception e) {
-                    System.err.println("Error getting invoice ID from dataObject: " + e.getMessage());
+                } else {
+                    // Si no se pudo deserializar, parseamos el JSON crudo
+                    String rawJson = deserializer.getRawJson();
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode root = mapper.readTree(rawJson);
+                    invoiceId = root.get("id").asText();
+                    System.out.println("📦 invoiceId desde rawJson: " + invoiceId);
                 }
+            } catch (Exception e) {
+                System.err.println("❌ Error al extraer invoice ID: " + e.getMessage());
             }
+
             if (invoiceId != null) {
                 try {
                     com.stripe.model.Invoice invoice = com.stripe.model.Invoice.retrieve(invoiceId);
                     String customerId = invoice.getCustomer();
                     com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
                     String email = customer.getEmail();
-                    System.out.println("Customer email from Stripe: " + email);
+
+                    System.out.println("📧 Email del cliente: " + email);
+
                     UserEntity user = userRepository.findByEmail(email).orElse(null);
                     if (user != null) {
-                        System.out.println("User found: " + user.getEmail() + " - Current roles: " + user.getRoles());
+                        System.out.println("👤 Usuario encontrado: " + user.getEmail());
                         if (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM)) {
                             if (user.getRoles() == null) {
-                                user.setRoles(new java.util.ArrayList<>());
+                                user.setRoles(new ArrayList<>());
                             }
                             user.getRoles().add(Role.PREMIUM);
                             userRepository.save(user);
-                            System.out.println("User upgraded to PREMIUM successfully: " + user.getEmail());
+                            System.out.println("🚀 Usuario actualizado a PREMIUM: " + user.getEmail());
                         } else {
-                            System.out.println("User already has PREMIUM role: " + user.getEmail());
+                            System.out.println("✅ Usuario ya es PREMIUM");
                         }
                     } else {
-                        System.err.println("User not found for email: " + email);
+                        System.err.println("❌ Usuario no encontrado con email: " + email);
                     }
                 } catch (Exception e) {
-                    System.err.println("Error retrieving invoice/customer from Stripe: " + e.getMessage());
+                    System.err.println("❌ Error al recuperar invoice/customer: " + e.getMessage());
                 }
             } else {
-                System.err.println("Invoice ID not found in event payload");
+                System.err.println("⚠️ No se pudo obtener invoice ID");
             }
+
         } else {
-            System.out.println("Event type not handled: " + event.getType());
+            System.out.println("ℹ️ Evento no manejado: " + eventType);
         }
+
         return ResponseEntity.ok("Webhook processed successfully");
     }
+
 }
