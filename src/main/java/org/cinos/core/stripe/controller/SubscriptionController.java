@@ -259,19 +259,23 @@ public class SubscriptionController {
      */
     @PostMapping("/webhook")
     public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
-        String payload = "";
+        StringBuilder payloadBuilder = new StringBuilder();
         try (BufferedReader reader = request.getReader()) {
             String line;
             while ((line = reader.readLine()) != null) {
-                payload += line;
+                payloadBuilder.append(line);
             }
         } catch (Exception e) {
             System.err.println("Error reading webhook payload: " + e.getMessage());
             return ResponseEntity.badRequest().body("Error reading payload");
         }
+        String payload = payloadBuilder.toString();
+        System.out.println("[DEBUG] Payload length: " + payload.length());
+        System.out.println("[DEBUG] Payload start: " + (payload.length() > 100 ? payload.substring(0, 100) : payload));
         
         String sigHeader = request.getHeader("Stripe-Signature");
         System.out.println("Webhook received - Event type: " + sigHeader);
+        System.out.println("Stripe endpointSecret in use: " + endpointSecret);
         
         Event event;
         try {
