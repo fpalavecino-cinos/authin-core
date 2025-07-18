@@ -36,21 +36,19 @@ public class PostSpecifications {
             predicates.add(activePostsPredicate);
 
             // Preferencia de marca
-            if (preferredBrand != null && !preferredBrand.isEmpty()) {
-                predicates.add(criteriaBuilder.equal(root.get("make"), preferredBrand));
-            }
+            // (Eliminado el filtro que solo devolvía la marca preferida)
+
             // Preferencia de usados/nuevos
-            if (Boolean.TRUE.equals(wantsUsedCars) && !Boolean.TRUE.equals(wantsNewCars)) {
-                predicates.add(criteriaBuilder.isTrue(root.get("isUsed")));
-            } else if (!Boolean.TRUE.equals(wantsUsedCars) && Boolean.TRUE.equals(wantsNewCars)) {
-                predicates.add(criteriaBuilder.isFalse(root.get("isUsed")));
-            }
-            // Preferencia de ubicación: si no quiere usar ubicación, ignorar proximityScore
-            boolean useLocation = Boolean.TRUE.equals(useLocationForRecommendations)
-                && userLatitude != null && userLongitude != null
-                && userLatitude != 0.0 && userLongitude != 0.0;
+            // (Eliminado el filtro que solo devolvía usados o nuevos)
 
             // --- Cálculo de relevancia ---
+            // Factor de marca preferida
+            Expression<Double> brandFactor = (preferredBrand != null && !preferredBrand.isEmpty())
+                ? criteriaBuilder.<Double>selectCase()
+                    .when(criteriaBuilder.equal(root.get("make"), preferredBrand), 1.5) // boost si coincide
+                    .otherwise(1.0)
+                : criteriaBuilder.literal(1.0);
+
             // Factor de tiempo
             Expression<Long> currentTimeMillis = criteriaBuilder.function(
                     "UNIX_TIMESTAMP", Long.class, criteriaBuilder.currentTimestamp()
@@ -83,7 +81,7 @@ public class PostSpecifications {
                             criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lng"), userLongitude), 2)
                     )
             );
-            Expression<Double> proximityScore = useLocation ? criteriaBuilder.toDouble(
+            Expression<Double> proximityScore = useLocationForRecommendations ? criteriaBuilder.toDouble(
                     criteriaBuilder.quot(1.0, criteriaBuilder.sum(distance, 1))
             ) : criteriaBuilder.literal(1.0);
 
@@ -97,26 +95,60 @@ public class PostSpecifications {
                     .when(criteriaBuilder.in(accountJoin.get("id")).value(followingsIds), 1.5) // Boost para seguidos
                     .otherwise(1.0); // Valor base para no seguidos
 
+            // Factor de preferencia usados/nuevos
+            Expression<Double> usedNewFactor = criteriaBuilder.literal(1.0);
+            if (Boolean.TRUE.equals(wantsUsedCars) && !Boolean.TRUE.equals(wantsNewCars)) {
+                usedNewFactor = criteriaBuilder.<Double>selectCase()
+                    .when(criteriaBuilder.isTrue(root.get("isUsed")), 1.5)
+                    .otherwise(1.0);
+            } else if (!Boolean.TRUE.equals(wantsUsedCars) && Boolean.TRUE.equals(wantsNewCars)) {
+                usedNewFactor = criteriaBuilder.<Double>selectCase()
+                    .when(criteriaBuilder.isFalse(root.get("isUsed")), 1.5)
+                    .otherwise(1.0);
+            } else if (Boolean.TRUE.equals(wantsUsedCars) && Boolean.TRUE.equals(wantsNewCars)) {
+                usedNewFactor = criteriaBuilder.literal(1.2); // pequeño boost si le da igual
+            }
+
+            // Factor de preferencia de ubicación
+            Expression<Double> locationFactor = criteriaBuilder.literal(1.0);
+            if (Boolean.TRUE.equals(useLocationForRecommendations)
+                && userLatitude != null && userLongitude != null
+                && userLatitude != 0.0 && userLongitude != 0.0) {
+                // Si la distancia es menor a cierto umbral, boost
+                locationFactor = criteriaBuilder.<Double>selectCase()
+                    .when(criteriaBuilder.lessThan(distance, 0.5), 1.5) // boost si está cerca (ajusta el umbral según tu escala)
+                    .otherwise(1.0);
+            }
+
             // Puntuación de relevancia modificada (ahora con multiplicación de factores)
             Expression<Double> relevanceScore = criteriaBuilder.prod(
-                    verificationFactor, // Multiplica primero por el factor de verificación
+                    brandFactor, // Multiplica primero por el factor de marca preferida
                     criteriaBuilder.prod(
-                            relationshipFactor, // Luego por el factor de relación
-                            criteriaBuilder.sum(
+                        usedNewFactor, // Multiplica por el factor de usados/nuevos
+                        criteriaBuilder.prod(
+                            locationFactor, // Multiplica por el factor de ubicación
+                            criteriaBuilder.prod(
+                                verificationFactor, // Multiplica por el factor de verificación
+                                criteriaBuilder.prod(
+                                    relationshipFactor, // Luego por el factor de relación
                                     criteriaBuilder.sum(
                                             criteriaBuilder.sum(
-                                                    criteriaBuilder.prod(timeFactor, 0.4),
-                                                    criteriaBuilder.prod(commentsFactor, 0.3)
+                                                    criteriaBuilder.sum(
+                                                            criteriaBuilder.prod(timeFactor, 0.4),
+                                                            criteriaBuilder.prod(commentsFactor, 0.3)
+                                                    ),
+                                                    criteriaBuilder.prod(proximityScore, 0.2)
                                             ),
-                                            criteriaBuilder.prod(proximityScore, 0.2)
-                                    ),
-                                    criteriaBuilder.prod(
-                                            criteriaBuilder.<Double>selectCase()
-                                                    .when(criteriaBuilder.isTrue(root.get("isVerified")), 0.5) // Bonus adicional para verificados
-                                                    .otherwise(0.0),
-                                            0.1
+                                            criteriaBuilder.prod(
+                                                    criteriaBuilder.<Double>selectCase()
+                                                            .when(criteriaBuilder.isTrue(root.get("isVerified")), 0.5) // Bonus adicional para verificados
+                                                            .otherwise(0.0),
+                                                    0.1
+                                            )
                                     )
+                                )
                             )
+                        )
                     )
             );
 

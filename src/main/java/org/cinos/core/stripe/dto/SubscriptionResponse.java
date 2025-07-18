@@ -5,6 +5,7 @@ import lombok.Builder;
 @Builder
 public record SubscriptionResponse(
         String clientSecret,
+        String checkoutUrl,
         String message,
         Boolean success
 ) {

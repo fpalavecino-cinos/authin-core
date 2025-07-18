@@ -6,6 +6,8 @@ import com.stripe.model.Customer;
 import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Subscription;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -137,5 +139,26 @@ public class StripeService {
     public boolean confirmPayment(String paymentIntentId) throws StripeException {
         PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
         return "succeeded".equals(paymentIntent.getStatus());
+    }
+
+    /**
+     * Crea una sesión de Stripe Checkout para suscripción
+     */
+    public String createSubscriptionCheckoutSession(String priceId, String successUrl, String cancelUrl, String customerEmail) throws StripeException {
+        Stripe.apiKey = stripeSecretKey;
+        SessionCreateParams params = SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
+                .setSuccessUrl(successUrl)
+                .setCancelUrl(cancelUrl)
+                .addLineItem(
+                        SessionCreateParams.LineItem.builder()
+                                .setPrice(priceId)
+                                .setQuantity(1L)
+                                .build()
+                )
+                .setCustomerEmail(customerEmail)
+                .build();
+        Session session = Session.create(params);
+        return session.getUrl();
     }
 }

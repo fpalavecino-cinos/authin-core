@@ -82,6 +82,18 @@ public class UserService implements IUserService {
     public UserDTO createUser(UserCreateRequest request) throws PasswordDontMatchException, DuplicateUserException {
         passwordsMatch(request.password(), request.repeatPassword());
 
+        // Validación lógica extra para username: mínimo 4 caracteres y al menos 3 letras
+        String username = request.username();
+        if (username.length() < 4 || username.chars().filter(Character::isLetter).count() < 3) {
+            throw new DuplicateUserException("El usuario debe tener al menos 4 caracteres y al menos 3 letras");
+        }
+
+        // Validación lógica extra para password: mínimo 6 caracteres y al menos 1 número
+        String password = request.password();
+        if (password.length() < 6 || password.chars().noneMatch(Character::isDigit)) {
+            throw new PasswordDontMatchException("La contraseña debe tener al menos 6 caracteres y al menos un número");
+        }
+
         if (userRepository.existsByUsername(request.username())) {
             throw new DuplicateUserException("El nombre de usuario ya está en uso");
         }

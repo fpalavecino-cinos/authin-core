@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.cinos.core.users.utils.exceptions.EmailExistException;
+import org.cinos.core.users.utils.exceptions.DuplicateUserException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -120,6 +121,18 @@ public class GlobalExceptionHandler {
 
         log.error("{}: {}", message, e.getMessage(), e);
 
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+    }
+
+    @ExceptionHandler(DuplicateUserException.class)
+    public ResponseEntity<ApiError> handleDuplicateUserException(HttpServletRequest req, DuplicateUserException e) {
+        ApiError apiError = ApiError.builder()
+                .url(req.getRequestURL().toString())
+                .date(LocalDateTime.now())
+                .method(req.getMethod())
+                .message(e.getMessage())
+                .build();
+        log.error("DuplicateUserException: {}", e.getMessage(), e);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
