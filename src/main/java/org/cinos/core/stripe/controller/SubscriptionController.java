@@ -288,15 +288,25 @@ public class SubscriptionController {
             System.out.println("Processing payment success event: " + event.getType());
             Object dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
             String invoiceId = null;
+            System.out.println("dataObject class: " + (dataObject != null ? dataObject.getClass().getName() : "null"));
+            System.out.println("dataObject toString: " + (dataObject != null ? dataObject.toString() : "null"));
             if (dataObject instanceof com.stripe.model.Invoice) {
                 invoiceId = ((com.stripe.model.Invoice) dataObject).getId();
             } else if (dataObject != null) {
-                // Intentar obtener el campo invoice por reflexión (para invoice_payment)
                 try {
-                    java.lang.reflect.Method getInvoice = dataObject.getClass().getMethod("getInvoice");
-                    invoiceId = (String) getInvoice.invoke(dataObject);
+                    // Si es un Map (LinkedHashMap), intenta obtener el campo "id"
+                    if (dataObject instanceof java.util.Map) {
+                        Object idObj = ((java.util.Map<?, ?>) dataObject).get("id");
+                        if (idObj != null) {
+                            invoiceId = idObj.toString();
+                        }
+                    } else {
+                        // Intentar reflexión como antes
+                        java.lang.reflect.Method getInvoice = dataObject.getClass().getMethod("getInvoice");
+                        invoiceId = (String) getInvoice.invoke(dataObject);
+                    }
                 } catch (Exception e) {
-                    System.err.println("Error getting invoice ID from invoice_payment: " + e.getMessage());
+                    System.err.println("Error getting invoice ID from dataObject: " + e.getMessage());
                 }
             }
             if (invoiceId != null) {
