@@ -117,9 +117,17 @@ public class SubscriptionController {
     @GetMapping("/status")
     public ResponseEntity<SubscriptionResponse> getSubscriptionStatus() {
         try {
-            // Aquí deberías obtener el usuario actual del contexto de seguridad
-            // Por ahora retornamos un estado simulado
-            return ResponseEntity.ok(SubscriptionResponse.builder().message("active").success(true).build());
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            
+            boolean isPremium = userEntity.getRoles() != null && userEntity.getRoles().contains(Role.PREMIUM);
+            String status = isPremium ? "premium" : "free";
+            
+            return ResponseEntity.ok(SubscriptionResponse.builder()
+                    .message(status)
+                    .success(true)
+                    .build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
@@ -207,10 +215,42 @@ public class SubscriptionController {
             String successUrl = request.getSuccessUrl();
             String cancelUrl = request.getCancelUrl();
             String url = stripeService.createSubscriptionCheckoutSession(priceId, successUrl, cancelUrl, email);
-            return ResponseEntity.ok(SubscriptionResponse.builder().checkoutUrl(url).success(true).build());
+            return ResponseEntity.ok(SubscriptionResponse.builder() .checkoutUrl(url).success(true).build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
+        }
+    }
+
+    /**
+     * Endpoint de prueba para simular la actualización a premium
+     */
+    @PostMapping("/test-upgrade/{email}")
+    public ResponseEntity<String> testUpgradeToPremium(@PathVariable String email) {
+        try {
+            UserEntity user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                System.out.println("Testing upgrade for user: " + user.getEmail() + " - Current roles: " + user.getRoles());
+                
+                if (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM)) {
+                    if (user.getRoles() == null) {
+                        user.setRoles(new java.util.ArrayList<>());
+                    }
+                    user.getRoles().add(Role.PREMIUM);
+                    userRepository.save(user);
+                    System.out.println("User upgraded to PREMIUM successfully: " + user.getEmail());
+                    return ResponseEntity.ok("User upgraded to PREMIUM successfully: " + user.getEmail());
+                } else {
+                    System.out.println("User already has PREMIUM role: " + user.getEmail());
+                    return ResponseEntity.ok("User already has PREMIUM role: " + user.getEmail());
+                }
+            } else {
+                System.err.println("User not found for email: " + email);
+                return ResponseEntity.badRequest().body("User not found for email: " + email);
+            }
+        } catch (Exception e) {
+            System.err.println("Error in test upgrade: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }
 
@@ -226,27 +266,74 @@ public class SubscriptionController {
                 payload += line;
             }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("");
+            System.err.println("Error reading webhook payload: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error reading payload");
         }
+        
         String sigHeader = request.getHeader("Stripe-Signature");
+        System.out.println("Webhook received - Event type: " + sigHeader);
+        
         Event event;
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
+            System.out.println("Webhook event constructed successfully: " + event.getType());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("");
+            System.err.println("Error constructing webhook event: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Invalid signature");
         }
+        
         if ("checkout.session.completed".equals(event.getType())) {
+            System.out.println("Processing checkout.session.completed event");
             Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
             if (session != null) {
                 String email = session.getCustomerDetails().getEmail();
-                UserEntity user = userRepository.findByEmail(email).orElse(null);
-                if (user != null && (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM))) {
-                    if (user.getRoles() == null) user.setRoles(new java.util.ArrayList<>());
-                    user.getRoles().add(Role.PREMIUM);
-                    userRepository.save(user);
-                }
+                System.out.println("Customer email from session: " + email);
+                // NO actualizar rol aquí, solo logging
+            } else {
+                System.err.println("Session object is null");
             }
+        } else if ("invoice.payment_succeeded".equals(event.getType()) || "invoice_payment.paid".equals(event.getType())) {
+            System.out.println("Processing payment success event: " + event.getType());
+            
+            // Para estos eventos, necesitamos obtener el customer email de otra manera
+            com.stripe.model.Invoice invoice = (com.stripe.model.Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
+            if (invoice != null && invoice.getCustomer() != null) {
+                String customerId = invoice.getCustomer();
+                System.out.println("Customer ID from invoice: " + customerId);
+                
+                // Buscar usuario por customer ID o intentar obtener email del customer
+                try {
+                    com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
+                    String email = customer.getEmail();
+                    System.out.println("Customer email from Stripe: " + email);
+                    
+                    UserEntity user = userRepository.findByEmail(email).orElse(null);
+                    if (user != null) {
+                        System.out.println("User found: " + user.getEmail() + " - Current roles: " + user.getRoles());
+                        
+                        if (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM)) {
+                            if (user.getRoles() == null) {
+                                user.setRoles(new java.util.ArrayList<>());
+                            }
+                            user.getRoles().add(Role.PREMIUM);
+                            userRepository.save(user);
+                            System.out.println("User upgraded to PREMIUM successfully: " + user.getEmail());
+                        } else {
+                            System.out.println("User already has PREMIUM role: " + user.getEmail());
+                        }
+                    } else {
+                        System.err.println("User not found for email: " + email);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error retrieving customer from Stripe: " + e.getMessage());
+                }
+            } else {
+                System.err.println("Invoice or customer is null");
+            }
+        } else {
+            System.out.println("Event type not handled: " + event.getType());
         }
-        return ResponseEntity.ok("");
+        
+        return ResponseEntity.ok("Webhook processed successfully");
     }
 }
