@@ -258,25 +258,14 @@ public class SubscriptionController {
      * Webhook de Stripe para eventos de suscripción
      */
     @PostMapping("/webhook")
-    public ResponseEntity<String> handleStripeWebhook(HttpServletRequest request) {
-        StringBuilder payloadBuilder = new StringBuilder();
-        try (BufferedReader reader = request.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                payloadBuilder.append(line);
-            }
-        } catch (Exception e) {
-            System.err.println("Error reading webhook payload: " + e.getMessage());
-            return ResponseEntity.badRequest().body("Error reading payload");
-        }
-        String payload = payloadBuilder.toString();
+    public ResponseEntity<String> handleStripeWebhook(
+        @RequestBody String payload,
+        @RequestHeader("Stripe-Signature") String sigHeader
+    ) {
         System.out.println("[DEBUG] Payload length: " + payload.length());
         System.out.println("[DEBUG] Payload start: " + (payload.length() > 100 ? payload.substring(0, 100) : payload));
-        
-        String sigHeader = request.getHeader("Stripe-Signature");
         System.out.println("Webhook received - Event type: " + sigHeader);
         System.out.println("Stripe endpointSecret in use: " + endpointSecret);
-        
         Event event;
         try {
             event = Webhook.constructEvent(payload, sigHeader, endpointSecret);
@@ -285,7 +274,6 @@ public class SubscriptionController {
             System.err.println("Error constructing webhook event: " + e.getMessage());
             return ResponseEntity.badRequest().body("Invalid signature");
         }
-        
         if ("checkout.session.completed".equals(event.getType())) {
             System.out.println("Processing checkout.session.completed event");
             Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
@@ -298,23 +286,17 @@ public class SubscriptionController {
             }
         } else if ("invoice.payment_succeeded".equals(event.getType()) || "invoice_payment.paid".equals(event.getType())) {
             System.out.println("Processing payment success event: " + event.getType());
-            
-            // Para estos eventos, necesitamos obtener el customer email de otra manera
             com.stripe.model.Invoice invoice = (com.stripe.model.Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
             if (invoice != null && invoice.getCustomer() != null) {
                 String customerId = invoice.getCustomer();
                 System.out.println("Customer ID from invoice: " + customerId);
-                
-                // Buscar usuario por customer ID o intentar obtener email del customer
                 try {
                     com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
                     String email = customer.getEmail();
                     System.out.println("Customer email from Stripe: " + email);
-                    
                     UserEntity user = userRepository.findByEmail(email).orElse(null);
                     if (user != null) {
                         System.out.println("User found: " + user.getEmail() + " - Current roles: " + user.getRoles());
-                        
                         if (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM)) {
                             if (user.getRoles() == null) {
                                 user.setRoles(new java.util.ArrayList<>());
@@ -337,7 +319,6 @@ public class SubscriptionController {
         } else {
             System.out.println("Event type not handled: " + event.getType());
         }
-        
         return ResponseEntity.ok("Webhook processed successfully");
     }
 }
