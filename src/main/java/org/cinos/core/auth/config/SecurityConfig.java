@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll() // Permitir WebSocket
                         .requestMatchers("/user/verify-code").permitAll()
                         .requestMatchers("/user/send-verification-code/**").permitAll()
+                        .requestMatchers("/subscriptions/**").permitAll()
                         .anyRequest().authenticated() // Todo lo demás requiere autenticación
                 )
                 .build();
