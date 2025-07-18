@@ -46,7 +46,7 @@ public class AuthController {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     JacksonFactory.getDefaultInstance())
-                    .setAudience(Collections.singletonList("681995243192-62r1eas03j9u2dgg40h136pfsh6fokq0.apps.googleusercontent.com")) // <-- PON TU CLIENT_ID
+                    .setAudience(Collections.singletonList("681995243192-r7gk27btviuon6bvcffjooqhhh67prs2.apps.googleusercontent.com")) // <-- PON TU CLIENT_ID
                     .build();
 
             GoogleIdToken idToken = verifier.verify(idTokenString);
