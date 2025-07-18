@@ -286,11 +286,23 @@ public class SubscriptionController {
             }
         } else if ("invoice.payment_succeeded".equals(event.getType()) || "invoice_payment.paid".equals(event.getType())) {
             System.out.println("Processing payment success event: " + event.getType());
-            com.stripe.model.Invoice invoice = (com.stripe.model.Invoice) event.getDataObjectDeserializer().getObject().orElse(null);
-            if (invoice != null && invoice.getCustomer() != null) {
-                String customerId = invoice.getCustomer();
-                System.out.println("Customer ID from invoice: " + customerId);
+            Object dataObject = event.getDataObjectDeserializer().getObject().orElse(null);
+            String invoiceId = null;
+            if (dataObject instanceof com.stripe.model.Invoice) {
+                invoiceId = ((com.stripe.model.Invoice) dataObject).getId();
+            } else if (dataObject != null) {
+                // Intentar obtener el campo invoice por reflexión (para invoice_payment)
                 try {
+                    java.lang.reflect.Method getInvoice = dataObject.getClass().getMethod("getInvoice");
+                    invoiceId = (String) getInvoice.invoke(dataObject);
+                } catch (Exception e) {
+                    System.err.println("Error getting invoice ID from invoice_payment: " + e.getMessage());
+                }
+            }
+            if (invoiceId != null) {
+                try {
+                    com.stripe.model.Invoice invoice = com.stripe.model.Invoice.retrieve(invoiceId);
+                    String customerId = invoice.getCustomer();
                     com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
                     String email = customer.getEmail();
                     System.out.println("Customer email from Stripe: " + email);
@@ -311,10 +323,10 @@ public class SubscriptionController {
                         System.err.println("User not found for email: " + email);
                     }
                 } catch (Exception e) {
-                    System.err.println("Error retrieving customer from Stripe: " + e.getMessage());
+                    System.err.println("Error retrieving invoice/customer from Stripe: " + e.getMessage());
                 }
             } else {
-                System.err.println("Invoice or customer is null");
+                System.err.println("Invoice ID not found in event payload");
             }
         } else {
             System.out.println("Event type not handled: " + event.getType());
