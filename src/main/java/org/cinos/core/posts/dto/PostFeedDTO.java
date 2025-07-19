@@ -22,6 +22,5 @@ public record PostFeedDTO(
         String kilometers,
         List<String> imagesUrls,
         Boolean isVerified,
-        Boolean isApproved
-) {
+        Boolean isApproved) {
 }

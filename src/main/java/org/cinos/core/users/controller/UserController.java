@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import org.cinos.core.users.dto.ContactInfoDTO;
 
 @RestController
 @RequestMapping("/user")
@@ -81,10 +85,23 @@ public class UserController {
         return ResponseEntity.ok(userService.updateRecommendationsPreferences(request));
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PatchMapping("/account/contact-info")
+    public ResponseEntity<?> updateContactInfo(@RequestBody ContactInfoDTO contactInfo) {
+        accountService.updateContactInfo(contactInfo);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/account/contact-info")
+    public ResponseEntity<ContactInfoDTO> getContactInfo() {
+        return ResponseEntity.ok(accountService.getContactInfo());
+    }
+
     @PostMapping("/send-verification-code/{email}")
     public ResponseEntity<?> sendVerificationCode(@PathVariable final String email) throws UserNotFoundException, EmailExistException {
-        userService.sendVerificationCode(email);
-        return ResponseEntity.ok().build();
+        LocalDateTime expiry = userService.sendVerificationCode(email);
+        return ResponseEntity.ok(Map.of("expiresAt", expiry.format(DateTimeFormatter.ISO_DATE_TIME)));
     }
 
     @PostMapping("/verify-code")

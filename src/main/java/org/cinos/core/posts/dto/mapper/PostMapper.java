@@ -18,6 +18,8 @@ public interface PostMapper {
     @Mapping(source = "userAccount", target = "userId", qualifiedByName = "mapUserId")
     @Mapping(source = "location", target = "location", qualifiedByName = "mapLocation")
     @Mapping(source = "userAccount", target = "userAvatar", qualifiedByName = "mapUserAvatar")
+    @Mapping(source = "userAccount", target = "userPhone", qualifiedByName = "mapUserPhone")
+    @Mapping(source = "userAccount", target = "userAttentionHours", qualifiedByName = "mapUserAttentionHours")
     @Mapping(source = "technicalVerification", target = "technicalVerification")
     @Mapping(source = "hp", target = "hp")
     @Mapping(source = "traccion", target = "traccion")
@@ -65,6 +67,16 @@ public interface PostMapper {
     @Named("mapUserAvatar")
     default String mapUserAvatar(AccountEntity account) {
         return account.getAvatarImg();
+    }
+
+    @Named("mapUserPhone")
+    default String mapUserPhone(AccountEntity account) {
+        return account.getPhone();
+    }
+
+    @Named("mapUserAttentionHours")
+    default String mapUserAttentionHours(AccountEntity account) {
+        return account.getAttentionHours();
     }
 
     @Named("mapCarModel")

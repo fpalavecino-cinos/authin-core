@@ -21,4 +21,6 @@ public class AccountEntity {
     private Integer posts;
     @ManyToMany(mappedBy = "usersSaved")
     private List<PostEntity> savedPosts;
+    private String phone;
+    private String attentionHours;
 }

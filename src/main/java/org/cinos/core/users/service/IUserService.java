@@ -12,6 +12,7 @@ import org.cinos.core.users.utils.exceptions.EmailExistException;
 import org.cinos.core.users.utils.exceptions.PasswordDontMatchException;
 import org.cinos.core.users.utils.exceptions.UserNotFoundException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface IUserService {
@@ -25,7 +26,7 @@ public interface IUserService {
     UserEntity getByIdEntity(Long id) throws UserNotFoundException;
     UserDTO getLoggedUser();
     String generateVerificationCode();
-    void sendVerificationCode(String email) throws UserNotFoundException, EmailExistException;
+    LocalDateTime sendVerificationCode(String email) throws UserNotFoundException, EmailExistException;
     VerifyCodeResponse verifyCode(VerifyCodeRequest verifyCodeRequest) throws UserNotFoundException;
     UserDTO updateRecommendationsPreferences(RecommendationsPreferencesRequest request);
 }

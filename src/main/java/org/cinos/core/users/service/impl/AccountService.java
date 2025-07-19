@@ -2,6 +2,7 @@ package org.cinos.core.users.service.impl;
 
 import org.cinos.core.posts.service.impl.StorageService;
 import org.cinos.core.users.dto.AccountDTO;
+import org.cinos.core.users.dto.ContactInfoDTO;
 import org.cinos.core.users.dto.UpdateAccountDTO;
 import org.cinos.core.users.entity.AccountEntity;
 import org.cinos.core.users.entity.UserEntity;
@@ -128,4 +129,24 @@ public class AccountService implements IAccountService {
         accountRepository.save(accountEntity);
     }
 
+    @Override
+    public void updateContactInfo(ContactInfoDTO contactInfo) {
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        AccountEntity account = accountRepository.findById(userEntity.getId()).orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        account.setPhone(contactInfo.getPhone());
+        account.setAttentionHours(contactInfo.getAttentionHours());
+        accountRepository.save(account);
+    }
+
+    @Override
+    public ContactInfoDTO getContactInfo() {
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        AccountEntity account = accountRepository.findById(userEntity.getId()).orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        ContactInfoDTO dto = new ContactInfoDTO();
+        dto.setPhone(account.getPhone());
+        dto.setAttentionHours(account.getAttentionHours());
+        return dto;
+    }
 }

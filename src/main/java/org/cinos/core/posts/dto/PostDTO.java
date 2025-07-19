@@ -28,5 +28,7 @@ public record PostDTO(
         Boolean isVerified,
         Integer hp,
         String motor,
-        String traccion) {
+        String traccion,
+        String userPhone,
+        String userAttentionHours) {
 }

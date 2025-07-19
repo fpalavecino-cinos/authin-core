@@ -150,7 +150,7 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public void sendVerificationCode(String email) throws EmailExistException {
+    public LocalDateTime sendVerificationCode(String email) throws EmailExistException {
         if(userRepository.existsByEmail(email)){
             throw new EmailExistException("El correo electrónico ya está asociado a una cuenta existente");
         }
@@ -179,6 +179,7 @@ public class UserService implements IUserService {
         } catch (Exception e) {
             throw new RuntimeException("Error al enviar el código de verificación", e);
         }
+        return pendingVerification.getExpiry();
     }
 
     @Override

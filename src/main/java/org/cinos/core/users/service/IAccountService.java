@@ -5,6 +5,7 @@ import org.cinos.core.users.dto.UpdateAccountDTO;
 import org.cinos.core.users.entity.AccountEntity;
 import org.cinos.core.users.entity.UserEntity;
 import org.cinos.core.users.utils.exceptions.UserNotFoundException;
+import org.cinos.core.users.dto.ContactInfoDTO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -22,4 +23,6 @@ public interface IAccountService {
     void decrementFollowers(Long fromUserId);
     List<AccountEntity> findByUsernameContainingIgnoreCase(String query);
     void updateUserAccount(UpdateAccountDTO accountDTO, MultipartFile file) throws UserNotFoundException, IOException;
+    void updateContactInfo(ContactInfoDTO contactInfo);
+    ContactInfoDTO getContactInfo();
 }
