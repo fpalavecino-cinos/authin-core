@@ -17,5 +17,8 @@ Boolean hasSeenRecommendationsModal,
 String preferredBrand,
 Boolean wantsUsedCars,
 Boolean wantsNewCars,
-Boolean useLocationForRecommendations
+Boolean useLocationForRecommendations,
+    String premiumNotificationBrand,
+    String premiumNotificationModel,
+    String premiumNotificationCondition
 ) { }

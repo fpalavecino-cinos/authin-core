@@ -5,6 +5,7 @@ import org.cinos.core.mail.models.SendEmailRequest;
 import org.cinos.core.mail.service.MailService;
 import org.cinos.core.users.controller.request.UserCreateRequest;
 import org.cinos.core.users.controller.request.RecommendationsPreferencesRequest;
+import org.cinos.core.users.controller.request.PremiumNotificationPreferencesRequest;
 import org.cinos.core.users.dto.DTOConverter;
 import org.cinos.core.users.dto.UserDTO;
 import org.cinos.core.users.dto.VerifyCodeRequest;
@@ -140,6 +141,24 @@ public class UserService implements IUserService {
     public UserDTO getLoggedUser(){
         UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        return userMapper.toDTO(userEntity);
+    }
+
+    @Override
+    public UserDTO getPremiumNotificationPreferences() {
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        return userMapper.toDTO(userEntity);
+    }
+
+    @Override
+    public UserDTO updatePremiumNotificationPreferences(PremiumNotificationPreferencesRequest request) {
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+        userEntity.setPremiumNotificationBrand(request.getBrand());
+        userEntity.setPremiumNotificationModel(request.getModel());
+        userEntity.setPremiumNotificationCondition(request.getCondition());
+        userRepository.save(userEntity);
         return userMapper.toDTO(userEntity);
     }
 

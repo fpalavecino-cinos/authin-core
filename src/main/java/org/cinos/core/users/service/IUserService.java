@@ -14,6 +14,7 @@ import org.cinos.core.users.utils.exceptions.UserNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.cinos.core.users.controller.request.PremiumNotificationPreferencesRequest;
 
 public interface IUserService {
     List<UserDTO> getUsers();
@@ -29,4 +30,6 @@ public interface IUserService {
     LocalDateTime sendVerificationCode(String email) throws UserNotFoundException, EmailExistException;
     VerifyCodeResponse verifyCode(VerifyCodeRequest verifyCodeRequest) throws UserNotFoundException;
     UserDTO updateRecommendationsPreferences(RecommendationsPreferencesRequest request);
+    UserDTO getPremiumNotificationPreferences();
+    UserDTO updatePremiumNotificationPreferences(PremiumNotificationPreferencesRequest request);
 }

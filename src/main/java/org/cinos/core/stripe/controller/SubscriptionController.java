@@ -1,5 +1,6 @@
 package org.cinos.core.stripe.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.model.Event;
@@ -80,6 +81,10 @@ public class SubscriptionController {
                 email,
                 request.isTrial()
             );
+            // Guardar el subscriptionId en el usuario
+            String subscriptionId = stripeService.getLastCreatedSubscriptionIdForUser(userId); // Debes implementar este método si no existe
+            userEntity.setStripeSubscriptionId(subscriptionId);
+            userRepository.save(userEntity);
             return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -266,7 +271,7 @@ public class SubscriptionController {
     public ResponseEntity<String> handleStripeWebhook(
             @RequestBody String payload,
             @RequestHeader("Stripe-Signature") String sigHeader
-    ) {
+    ) throws JsonProcessingException {
         System.out.println("[DEBUG] Payload length: " + payload.length());
         System.out.println("[DEBUG] Signature: " + sigHeader);
         System.out.println("[DEBUG] endpointSecret: " + endpointSecret);
@@ -351,7 +356,28 @@ public class SubscriptionController {
                 System.err.println("⚠️ No se pudo obtener invoice ID");
             }
 
-        } else {
+        } else if ("customer.subscription.deleted".equals(eventType)) {
+            System.out.println("➡️ Evento: customer.subscription.deleted");
+            String rawJson = event.getDataObjectDeserializer().getRawJson();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(rawJson);
+            String subscriptionId = root.get("id").asText();
+            System.out.println("📦 subscriptionId desde rawJson: " + subscriptionId);
+            var userOpt = userRepository.findByStripeSubscriptionId(subscriptionId);
+            if (userOpt.isPresent()) {
+                UserEntity user = userOpt.get();
+                if (user.getRoles() != null) {
+                    user.getRoles().remove(org.cinos.core.users.model.Role.PREMIUM);
+                }
+                user.setStripeSubscriptionId(null);
+                userRepository.save(user);
+                System.out.println("🚨 Rol PREMIUM removido y subscriptionId limpiado para usuario: " + user.getEmail());
+            } else {
+                System.err.println("❌ Usuario no encontrado con subscriptionId: " + subscriptionId);
+            }
+        }
+
+        else {
             System.out.println("ℹ️ Evento no manejado: " + eventType);
         }
 

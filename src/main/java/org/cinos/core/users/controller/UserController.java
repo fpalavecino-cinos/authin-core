@@ -2,6 +2,7 @@ package org.cinos.core.users.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.coyote.BadRequestException;
+import org.cinos.core.users.controller.request.PremiumNotificationPreferencesRequest;
 import org.cinos.core.users.controller.request.UserCreateRequest;
 import org.cinos.core.users.controller.request.RecommendationsPreferencesRequest;
 import org.cinos.core.users.dto.*;
@@ -23,6 +24,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import org.cinos.core.users.dto.ContactInfoDTO;
+import org.cinos.core.technical_verification.repository.TechnicalVerificationRepository;
+import org.cinos.core.users.controller.PremiumStatsResponse;
+import org.cinos.core.stripe.service.StripeService;
+import com.stripe.exception.StripeException;
 
 @RestController
 @RequestMapping("/user")
@@ -31,6 +36,8 @@ public class UserController {
 
     private final IUserService userService;
     private final IAccountService accountService;
+    private final TechnicalVerificationRepository technicalVerificationRepository;
+    private final StripeService stripeService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
@@ -96,6 +103,56 @@ public class UserController {
     @GetMapping("/account/contact-info")
     public ResponseEntity<ContactInfoDTO> getContactInfo() {
         return ResponseEntity.ok(accountService.getContactInfo());
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/premium-notification-preferences")
+    public ResponseEntity<UserDTO> getPremiumNotificationPreferences() {
+        return ResponseEntity.ok(userService.getPremiumNotificationPreferences());
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/premium-notification-preferences")
+    public ResponseEntity<UserDTO> updatePremiumNotificationPreferences(@RequestBody PremiumNotificationPreferencesRequest request) {
+        return ResponseEntity.ok(userService.updatePremiumNotificationPreferences(request));
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/premium/stats")
+    public ResponseEntity<PremiumStatsResponse> getPremiumStats() throws StripeException, UserNotFoundException {
+        // Obtener usuario logueado
+        var authentication = (org.springframework.security.authentication.UsernamePasswordAuthenticationToken) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        var userEntity = (org.cinos.core.users.entity.UserEntity) authentication.getPrincipal();
+        // Obtener cuenta
+        var account = accountService.getAccountEntityById(userEntity.getId());
+        // Calcular fechas de inicio y fin de ciclo premium
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime startOfPeriod;
+        java.time.LocalDateTime endOfPeriod;
+        java.time.LocalDateTime nextResetDate;
+        if (userEntity.getStripeSubscriptionId() != null) {
+            Long renewalEpoch = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
+            nextResetDate = java.time.LocalDateTime.ofEpochSecond(renewalEpoch, 0, java.time.ZoneOffset.UTC);
+            // El periodo actual es desde la última renovación hasta la próxima
+            endOfPeriod = nextResetDate;
+            startOfPeriod = endOfPeriod.minusMonths(1); // Asumiendo ciclo mensual
+        } else {
+            // Fallback: ciclo mensual calendario
+            startOfPeriod = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            endOfPeriod = now.plusMonths(1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            nextResetDate = endOfPeriod;
+        }
+        // Contar verificaciones técnicas propias usadas en el ciclo actual
+        long verificationsUsed = technicalVerificationRepository.countByPost_UserAccount_IdAndSentToVerificationDateBetween(account.getId(), startOfPeriod, endOfPeriod);
+        int maxVerifications = 1;
+        int verificationsRemaining = Math.max(0, maxVerifications - (int)verificationsUsed);
+        int verificationReportsRemaining = verificationsRemaining; // 1 informe por ciclo
+        return ResponseEntity.ok(new PremiumStatsResponse(
+            verificationsRemaining,
+            verificationReportsRemaining,
+            (int)verificationsUsed,
+            nextResetDate
+        ));
     }
 
     @PostMapping("/send-verification-code/{email}")

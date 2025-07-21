@@ -161,4 +161,16 @@ public class StripeService {
         Session session = Session.create(params);
         return session.getUrl();
     }
+
+    /**
+     * Obtiene la fecha de próxima renovación de una suscripción de Stripe
+     */
+    public Long getSubscriptionNextRenewal(String subscriptionId) throws StripeException {
+        Subscription subscription = Subscription.retrieve(subscriptionId);
+        return subscription.getCurrentPeriodEnd(); // Epoch seconds
+    }
+
+    public String getLastCreatedSubscriptionIdForUser(String userId) {
+        return userIdToSubscriptionId.get(userId);
+    }
 }

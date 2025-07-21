@@ -14,4 +14,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     Optional<UserEntity> findByEmail(String email);
 
     Optional<UserEntity> findByStripeCustomerId(String stripeCustomerId);
+    java.util.Optional<UserEntity> findByStripeSubscriptionId(String stripeSubscriptionId);
 }

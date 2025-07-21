@@ -46,6 +46,9 @@ public class UserEntity implements UserDetails {
     @Column(unique = true, nullable = true)
     private String stripeCustomerId;
 
+    @Column(name = "stripe_subscription_id", unique = true, nullable = true)
+    private String stripeSubscriptionId;
+
     @Column(name = "has_seen_recommendations_modal")
     private Boolean hasSeenRecommendationsModal = false;
 
@@ -60,6 +63,15 @@ public class UserEntity implements UserDetails {
 
     @Column(name = "use_location_for_recommendations")
     private Boolean useLocationForRecommendations;
+
+    @Column(name = "premium_notification_brand")
+    private String premiumNotificationBrand;
+
+    @Column(name = "premium_notification_model")
+    private String premiumNotificationModel;
+
+    @Column(name = "premium_notification_condition")
+    private String premiumNotificationCondition;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
