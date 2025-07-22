@@ -87,7 +87,7 @@ public class PostSpecifications {
 
             // Factor de verificación (nuevo)
             Expression<Double> verificationFactor = criteriaBuilder.<Double>selectCase()
-                    .when(criteriaBuilder.isTrue(root.get("isVerified")), 1.5) // Boost para verificados
+                    .when(criteriaBuilder.isTrue(root.get("isVerified")), 3.0) // Boost para verificados
                     .otherwise(1.0); // Valor base para no verificados
 
             // Factor de relación (modificado)
