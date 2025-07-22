@@ -75,17 +75,15 @@ public class SubscriptionController {
             String userId = userEntity.getId().toString();
             String email = userEntity.getEmail();
 
-            String clientSecret = stripeService.createSubscription(
+            StripeService.StripeSubscriptionResult result = stripeService.createSubscriptionWithId(
                 request.getPlanId(),
                 userId,
                 email,
                 request.isTrial()
             );
-            // Guardar el subscriptionId en el usuario
-            String subscriptionId = stripeService.getLastCreatedSubscriptionIdForUser(userId); // Debes implementar este método si no existe
-            userEntity.setStripeSubscriptionId(subscriptionId);
+            userEntity.setStripeSubscriptionId(result.subscriptionId);
             userRepository.save(userEntity);
-            return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(clientSecret).success(true).build());
+            return ResponseEntity.ok(SubscriptionResponse.builder().clientSecret(result.clientSecret).success(true).build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder()

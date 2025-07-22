@@ -173,4 +173,33 @@ public class StripeService {
     public String getLastCreatedSubscriptionIdForUser(String userId) {
         return userIdToSubscriptionId.get(userId);
     }
+
+    public static class StripeSubscriptionResult {
+        public final String clientSecret;
+        public final String subscriptionId;
+        public StripeSubscriptionResult(String clientSecret, String subscriptionId) {
+            this.clientSecret = clientSecret;
+            this.subscriptionId = subscriptionId;
+        }
+    }
+
+    public StripeSubscriptionResult createSubscriptionWithId(String planId, String userId, String email, boolean trial) throws StripeException {
+        String customerId = getOrCreateCustomer(userId, email);
+        Map<String, Object> item = new HashMap<>();
+        item.put("price", getPriceIdForPlan(planId));
+        List<Object> items = new ArrayList<>();
+        items.add(item);
+        Map<String, Object> params = new HashMap<>();
+        params.put("customer", customerId);
+        params.put("items", items);
+        if (trial) {
+            params.put("trial_period_days", 7);
+        }
+        params.put("payment_behavior", "default_incomplete");
+        params.put("expand", List.of("latest_invoice.payment_intent"));
+        Subscription subscription = Subscription.create(params);
+        Invoice invoice = subscription.getLatestInvoiceObject();
+        PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
+        return new StripeSubscriptionResult(paymentIntent.getClientSecret(), subscription.getId());
+    }
 }
