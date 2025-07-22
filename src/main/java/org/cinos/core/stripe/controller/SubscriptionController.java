@@ -338,6 +338,7 @@ public class SubscriptionController {
                             if (user.getRoles() == null) {
                                 user.setRoles(new ArrayList<>());
                             }
+                            user.setStripeSubscriptionId(invoice.getSubscription());
                             user.getRoles().add(Role.PREMIUM);
                             userRepository.save(user);
                             System.out.println("🚀 Usuario actualizado a PREMIUM: " + user.getEmail());
