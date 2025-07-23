@@ -7,6 +7,7 @@ import org.cinos.core.posts.models.DocumentationStatus;
 import org.cinos.core.posts.models.VerificationStatus;
 import org.cinos.core.technical_verification.entity.TechnicalVerification;
 import org.cinos.core.users.entity.AccountEntity;
+import org.cinos.core.users.entity.UserEntity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -59,5 +60,7 @@ public class PostEntity implements Serializable {
     private Integer hp;
     private String motor;
     private String traccion;
+    @ManyToMany(mappedBy = "unlockedTechnicalVerifications")
+    private List<UserEntity> usersWithUnlockedVerification = new ArrayList<>();
 
 }

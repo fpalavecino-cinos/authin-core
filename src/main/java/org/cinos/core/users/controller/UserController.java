@@ -28,6 +28,11 @@ import org.cinos.core.technical_verification.repository.TechnicalVerificationRep
 import org.cinos.core.users.controller.PremiumStatsResponse;
 import org.cinos.core.stripe.service.StripeService;
 import com.stripe.exception.StripeException;
+import org.cinos.core.posts.repository.PostRepository;
+import org.cinos.core.users.repository.UserRepository;
+import org.cinos.core.posts.entity.PostEntity;
+import org.cinos.core.users.entity.UserEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/user")
@@ -38,6 +43,8 @@ public class UserController {
     private final IAccountService accountService;
     private final TechnicalVerificationRepository technicalVerificationRepository;
     private final StripeService stripeService;
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
@@ -142,11 +149,11 @@ public class UserController {
             endOfPeriod = now.plusMonths(1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
             nextResetDate = endOfPeriod;
         }
-        // Contar verificaciones técnicas propias usadas en el ciclo actual
-        long verificationsUsed = technicalVerificationRepository.countByPost_UserAccount_IdAndSentToVerificationDateBetween(account.getId(), startOfPeriod, endOfPeriod);
+        // Usar el campo real de créditos
+        int verificationReportsRemaining = userEntity.getTechnicalVerificationCredits() != null ? userEntity.getTechnicalVerificationCredits() : 0;
         int maxVerifications = 1;
-        int verificationsRemaining = Math.max(0, maxVerifications - (int)verificationsUsed);
-        int verificationReportsRemaining = verificationsRemaining; // 1 informe por ciclo
+        long verificationsUsed = maxVerifications - verificationReportsRemaining;
+        int verificationsRemaining = verificationReportsRemaining;
         return ResponseEntity.ok(new PremiumStatsResponse(
             verificationsRemaining,
             verificationReportsRemaining,
@@ -164,5 +171,34 @@ public class UserController {
     @PostMapping("/verify-code")
     public ResponseEntity<VerifyCodeResponse> verifyCode(@RequestBody VerifyCodeRequest verifyCodeRequest) throws UserNotFoundException {
         return ResponseEntity.ok().body(userService.verifyCode(verifyCodeRequest));
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/technical-verification-access/{postId}")
+    public ResponseEntity<Boolean> hasTechnicalVerificationAccess(
+            @AuthenticationPrincipal UserEntity principal,
+            @PathVariable Long postId) {
+        UserEntity user = userRepository.findById(principal.getId()).orElseThrow();
+        PostEntity post = postRepository.findById(postId).orElseThrow();
+        boolean hasAccess = user.getUnlockedTechnicalVerifications().contains(post);
+        return ResponseEntity.ok(hasAccess);
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/technical-verification-access/{postId}")
+    public ResponseEntity<?> unlockTechnicalVerificationAccess(
+            @AuthenticationPrincipal UserEntity principal,
+            @PathVariable Long postId) {
+        UserEntity user = userRepository.findById(principal.getId()).orElseThrow();
+        PostEntity post = postRepository.findById(postId).orElseThrow();
+        if (user.getTechnicalVerificationCredits() == null || user.getTechnicalVerificationCredits() <= 0) {
+            return ResponseEntity.status(403).body("No tienes más informes técnicos disponibles para desbloquear este ciclo.");
+        }
+        if (!user.getUnlockedTechnicalVerifications().contains(post)) {
+            user.getUnlockedTechnicalVerifications().add(post);
+            user.setTechnicalVerificationCredits(user.getTechnicalVerificationCredits() - 1);
+            userRepository.save(user);
+        }
+        return ResponseEntity.ok().build();
     }
 }

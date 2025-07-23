@@ -340,11 +340,10 @@ public class SubscriptionController {
                             }
                             user.setStripeSubscriptionId(invoice.getSubscription());
                             user.getRoles().add(Role.PREMIUM);
-                            userRepository.save(user);
-                            System.out.println("🚀 Usuario actualizado a PREMIUM: " + user.getEmail());
-                        } else {
-                            System.out.println("✅ Usuario ya es PREMIUM");
                         }
+                        user.setTechnicalVerificationCredits(1); // Resetear créditos
+                        userRepository.save(user);
+                        System.out.println("🚀 Usuario actualizado a PREMIUM y créditos reseteados: " + user.getEmail());
                     } else {
                         System.err.println("❌ Usuario no encontrado con email: " + email);
                     }

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.cinos.core.posts.entity.PostEntity;
 
 @Entity
 @Getter
@@ -72,6 +73,17 @@ public class UserEntity implements UserDetails {
 
     @Column(name = "premium_notification_condition")
     private String premiumNotificationCondition;
+
+    @Column(name = "technical_verification_credits")
+    private Integer technicalVerificationCredits = 1;
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_technical_verification_access",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "post_id")
+    )
+    private List<PostEntity> unlockedTechnicalVerifications = new ArrayList<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
