@@ -372,15 +372,16 @@ public class SubscriptionController {
 
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
             Session session = null;
+            Map<String, Object> sessionMap = null;
             if (deserializer.getObject().isPresent()) {
                 session = (Session) deserializer.getObject().get();
             } else {
-                // Deserialización manual si el SDK no puede
+                // Deserialización manual a Map si el SDK no puede
                 String rawJson = deserializer.getRawJson();
                 System.err.println("No se pudo deserializar el objeto Session. JSON crudo: " + rawJson);
                 try {
                     ObjectMapper mapper = new ObjectMapper();
-                    session = mapper.readValue(rawJson, Session.class);
+                    sessionMap = mapper.readValue(rawJson, Map.class);
                 } catch (Exception ex) {
                     System.err.println("Error al mapear manualmente el Session: " + ex.getMessage());
                     return ResponseEntity.badRequest().body("No se pudo deserializar el objeto Session");
@@ -389,15 +390,12 @@ public class SubscriptionController {
             if (session != null) {
                 String email = session.getCustomerDetails() != null ? session.getCustomerDetails().getEmail() : session.getCustomerEmail();
                 System.out.println("Email cliente: " + email);
-                
                 // Verificar si es un pago de acceso a verificación
                 String type = session.getMetadata().get("type");
                 if ("verification_access".equals(type)) {
                     String postId = session.getMetadata().get("postId");
                     String userId = session.getMetadata().get("userId");
-                    
                     System.out.println("🔍 Procesando checkout de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
-                    
                     try {
                         Long postIdLong = null, userIdLong = null;
                         try {
@@ -409,7 +407,6 @@ public class SubscriptionController {
                         }
                         UserEntity user = userRepository.findById(userIdLong).orElse(null);
                         if (user != null) {
-                            // Desbloquear acceso a la verificación específica
                             org.cinos.core.posts.entity.PostEntity post = postRepository.findById(postIdLong).orElse(null);
                             if (post != null) {
                                 if (!user.getUnlockedTechnicalVerifications().contains(post)) {
@@ -431,6 +428,47 @@ public class SubscriptionController {
                     }
                 } else {
                     System.out.println("ℹ️ Tipo de checkout no manejado: " + type);
+                }
+            } else if (sessionMap != null) {
+                // Acceso manual a los metadatos
+                Map<String, Object> metadata = (Map<String, Object>) sessionMap.get("metadata");
+                String type = (String) metadata.get("type");
+                if ("verification_access".equals(type)) {
+                    String postId = (String) metadata.get("postId");
+                    String userId = (String) metadata.get("userId");
+                    System.out.println("🔍 Procesando checkout de acceso a verificación (MAP) - PostId: " + postId + ", UserId: " + userId);
+                    try {
+                        Long postIdLong = null, userIdLong = null;
+                        try {
+                            postIdLong = Long.parseLong(postId);
+                            userIdLong = Long.parseLong(userId);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Error al convertir postId o userId a Long (MAP)");
+                            return ResponseEntity.badRequest().body("IDs inválidos (MAP)");
+                        }
+                        UserEntity user = userRepository.findById(userIdLong).orElse(null);
+                        if (user != null) {
+                            org.cinos.core.posts.entity.PostEntity post = postRepository.findById(postIdLong).orElse(null);
+                            if (post != null) {
+                                if (!user.getUnlockedTechnicalVerifications().contains(post)) {
+                                    user.getUnlockedTechnicalVerifications().add(post);
+                                    userRepository.save(user);
+                                    System.out.println("🔓 Acceso a verificación desbloqueado para usuario: " + user.getEmail() + " y post: " + postId);
+                                } else {
+                                    System.out.println("ℹ️ Usuario ya tenía acceso a esta verificación: " + user.getEmail() + " y post: " + postId);
+                                }
+                            } else {
+                                System.err.println("❌ Post no encontrado con ID: " + postId);
+                            }
+                        } else {
+                            System.err.println("❌ Usuario no encontrado con ID: " + userId);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error al procesar acceso a verificación (MAP): " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("ℹ️ Tipo de checkout no manejado (MAP): " + type);
                 }
             } else {
                 System.err.println("❌ Session es null incluso tras deserialización manual");
