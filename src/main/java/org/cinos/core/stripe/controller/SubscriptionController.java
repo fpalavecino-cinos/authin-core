@@ -252,8 +252,8 @@ public class SubscriptionController {
             UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             UserEntity userEntity = (UserEntity) authentication.getPrincipal();
 
-            String successUrl = "https://yourdomain.com/verification-access-success?postId=" + request.postId();
-            String cancelUrl = "https://yourdomain.com/verification-access-cancel";
+            String successUrl = "http://localhost:8100/post/" + request.postId();
+            String cancelUrl = "http://localhost:8100/post/" + request.postId();
 
             String checkoutUrl = stripeService.createVerificationAccessCheckoutSession(
                 request.postId(), 
