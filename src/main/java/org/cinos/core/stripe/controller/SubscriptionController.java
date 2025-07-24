@@ -370,9 +370,24 @@ public class SubscriptionController {
         if ("checkout.session.completed".equals(eventType)) {
             System.out.println("➡️ Evento: checkout.session.completed");
 
-            Session session = (Session) event.getDataObjectDeserializer().getObject().orElse(null);
+            EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+            Session session = null;
+            if (deserializer.getObject().isPresent()) {
+                session = (Session) deserializer.getObject().get();
+            } else {
+                // Deserialización manual si el SDK no puede
+                String rawJson = deserializer.getRawJson();
+                System.err.println("No se pudo deserializar el objeto Session. JSON crudo: " + rawJson);
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    session = mapper.readValue(rawJson, Session.class);
+                } catch (Exception ex) {
+                    System.err.println("Error al mapear manualmente el Session: " + ex.getMessage());
+                    return ResponseEntity.badRequest().body("No se pudo deserializar el objeto Session");
+                }
+            }
             if (session != null) {
-                String email = session.getCustomerDetails().getEmail();
+                String email = session.getCustomerDetails() != null ? session.getCustomerDetails().getEmail() : session.getCustomerEmail();
                 System.out.println("Email cliente: " + email);
                 
                 // Verificar si es un pago de acceso a verificación
@@ -384,10 +399,18 @@ public class SubscriptionController {
                     System.out.println("🔍 Procesando checkout de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
                     
                     try {
-                        UserEntity user = userRepository.findById(Long.parseLong(userId)).orElse(null);
+                        Long postIdLong = null, userIdLong = null;
+                        try {
+                            postIdLong = Long.parseLong(postId);
+                            userIdLong = Long.parseLong(userId);
+                        } catch (NumberFormatException e) {
+                            System.err.println("Error al convertir postId o userId a Long");
+                            return ResponseEntity.badRequest().body("IDs inválidos");
+                        }
+                        UserEntity user = userRepository.findById(userIdLong).orElse(null);
                         if (user != null) {
                             // Desbloquear acceso a la verificación específica
-                            org.cinos.core.posts.entity.PostEntity post = postRepository.findById(Long.parseLong(postId)).orElse(null);
+                            org.cinos.core.posts.entity.PostEntity post = postRepository.findById(postIdLong).orElse(null);
                             if (post != null) {
                                 if (!user.getUnlockedTechnicalVerifications().contains(post)) {
                                     user.getUnlockedTechnicalVerifications().add(post);
@@ -410,37 +433,36 @@ public class SubscriptionController {
                     System.out.println("ℹ️ Tipo de checkout no manejado: " + type);
                 }
             } else {
-                System.err.println("❌ Session es null");
+                System.err.println("❌ Session es null incluso tras deserialización manual");
             }
 
         } else if ("invoice.payment_succeeded".equals(eventType) || "invoice_payment.paid".equals(eventType)) {
             System.out.println("➡️ Evento: " + eventType);
 
-            // Si el objeto no se puede deserializar automáticamente, lo parseamos manualmente
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-
-            String invoiceId = null;
-            try {
-                if (deserializer.getObject().isPresent()) {
-                    Object dataObject = deserializer.getObject().get();
-                    if (dataObject instanceof com.stripe.model.Invoice) {
-                        invoiceId = ((com.stripe.model.Invoice) dataObject).getId();
-                    }
-                } else {
-                    // Si no se pudo deserializar, parseamos el JSON crudo
-                    String rawJson = deserializer.getRawJson();
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode root = mapper.readTree(rawJson);
-                    invoiceId = root.get("id").asText();
-                    System.out.println("📦 invoiceId desde rawJson: " + invoiceId);
+            com.stripe.model.Invoice invoice = null;
+            if (deserializer.getObject().isPresent()) {
+                Object dataObject = deserializer.getObject().get();
+                if (dataObject instanceof com.stripe.model.Invoice) {
+                    invoice = (com.stripe.model.Invoice) dataObject;
                 }
-            } catch (Exception e) {
-                System.err.println("❌ Error al extraer invoice ID: " + e.getMessage());
+            } else {
+                // Deserialización manual si el SDK no puede
+                String rawJson = deserializer.getRawJson();
+                System.err.println("No se pudo deserializar el objeto Invoice. JSON crudo: " + rawJson);
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    invoice = mapper.readValue(rawJson, com.stripe.model.Invoice.class);
+                } catch (Exception ex) {
+                    System.err.println("Error al mapear manualmente el Invoice: " + ex.getMessage());
+                    return ResponseEntity.badRequest().body("No se pudo deserializar el objeto Invoice");
+                }
             }
 
+            String invoiceId = invoice != null ? invoice.getId() : null;
             if (invoiceId != null) {
                 try {
-                    com.stripe.model.Invoice invoice = com.stripe.model.Invoice.retrieve(invoiceId);
+                    invoice = com.stripe.model.Invoice.retrieve(invoiceId);
                     String customerId = invoice.getCustomer();
                     com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
                     String email = customer.getEmail();
@@ -472,17 +494,35 @@ public class SubscriptionController {
 
         } else if ("payment_intent.succeeded".equals(eventType)) {
             System.out.println("➡️ Evento: payment_intent.succeeded");
-            
-            com.stripe.model.PaymentIntent paymentIntent = (com.stripe.model.PaymentIntent) event.getDataObjectDeserializer().getObject().orElse(null);
+
+            EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+            com.stripe.model.PaymentIntent paymentIntent = null;
+            if (deserializer.getObject().isPresent()) {
+                Object dataObject = deserializer.getObject().get();
+                if (dataObject instanceof com.stripe.model.PaymentIntent) {
+                    paymentIntent = (com.stripe.model.PaymentIntent) dataObject;
+                }
+            } else {
+                // Deserialización manual si el SDK no puede
+                String rawJson = deserializer.getRawJson();
+                System.err.println("No se pudo deserializar el objeto PaymentIntent. JSON crudo: " + rawJson);
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    paymentIntent = mapper.readValue(rawJson, com.stripe.model.PaymentIntent.class);
+                } catch (Exception ex) {
+                    System.err.println("Error al mapear manualmente el PaymentIntent: " + ex.getMessage());
+                    return ResponseEntity.badRequest().body("No se pudo deserializar el objeto PaymentIntent");
+                }
+            }
+
             if (paymentIntent != null) {
                 String type = paymentIntent.getMetadata().get("type");
-                
                 if ("verification_access".equals(type)) {
                     String postId = paymentIntent.getMetadata().get("postId");
                     String userId = paymentIntent.getMetadata().get("userId");
-                    
+
                     System.out.println("🔍 Procesando pago de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
-                    
+
                     try {
                         UserEntity user = userRepository.findById(Long.parseLong(userId)).orElse(null);
                         if (user != null) {
@@ -510,7 +550,7 @@ public class SubscriptionController {
                     System.out.println("ℹ️ Tipo de pago no manejado: " + type);
                 }
             } else {
-                System.err.println("❌ PaymentIntent es null");
+                System.err.println("❌ PaymentIntent es null incluso tras deserialización manual");
             }
         } else if ("customer.subscription.deleted".equals(eventType)) {
             System.out.println("➡️ Evento: customer.subscription.deleted");
