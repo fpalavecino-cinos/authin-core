@@ -28,20 +28,20 @@ public class MakeService implements IMakeService {
             return makeRepository.findAll().stream()
                     .sorted(Comparator.comparing(MakeEntity::getName, String.CASE_INSENSITIVE_ORDER))
                     .map(e->
-                            MakeDTO.builder()
-                                    .id(e.getId())
-                                    .name(e.getName())
-                                    .build()
-                    ).toList();
+                    MakeDTO.builder()
+                            .id(e.getId())
+                            .name(e.getName())
+                            .build()
+            ).toList();
         }
 
         return makeRepository.findByNameContainingIgnoreCase(name).stream()
                 .sorted(Comparator.comparing(MakeEntity::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(e->
-                        MakeDTO.builder()
-                                .id(e.getId())
-                                .name(e.getName())
-                                .build()
-                ).toList();
+                MakeDTO.builder()
+                        .id(e.getId())
+                        .name(e.getName())
+                        .build()
+        ).toList();
     }
 }

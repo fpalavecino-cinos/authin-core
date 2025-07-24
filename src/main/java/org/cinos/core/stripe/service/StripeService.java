@@ -7,8 +7,10 @@ import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
+import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
+import org.cinos.core.users.entity.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -201,5 +203,21 @@ public class StripeService {
         Invoice invoice = subscription.getLatestInvoiceObject();
         PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
         return new StripeSubscriptionResult(paymentIntent.getClientSecret(), subscription.getId());
+    }
+
+    public String createVerificationAccessPaymentIntent(Long postId, UserEntity user) throws StripeException {
+        // Crear PaymentIntent para acceso a verificación específica
+        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+            .setAmount(499L) // $4.99 en centavos
+            .setCurrency("usd")
+            .setCustomer(user.getStripeCustomerId())
+            .putMetadata("postId", postId.toString())
+            .putMetadata("userId", user.getId().toString())
+            .putMetadata("type", "verification_access")
+            .setDescription("Acceso a informe técnico")
+            .build();
+
+        PaymentIntent paymentIntent = PaymentIntent.create(params);
+        return paymentIntent.getClientSecret();
     }
 }

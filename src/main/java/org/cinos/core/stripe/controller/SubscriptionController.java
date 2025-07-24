@@ -9,24 +9,24 @@ import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.cinos.core.stripe.dto.CreateSubscriptionRequest;
-import org.cinos.core.stripe.dto.SubscriptionPlanDto;
-import org.cinos.core.stripe.dto.SubscriptionResponse;
+import org.cinos.core.stripe.dto.*;
 import org.cinos.core.stripe.service.StripeService;
 import org.cinos.core.users.entity.UserEntity;
 import org.cinos.core.users.model.Role;
 import org.cinos.core.users.repository.UserRepository;
+import org.cinos.core.posts.repository.PostRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
-import org.cinos.core.stripe.dto.StripeInvoicePayment;
+import java.util.Map;
 
 @RestController
 @RequestMapping("subscriptions")
@@ -38,6 +38,9 @@ public class SubscriptionController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PostRepository postRepository;
 
     @Value("${stripe.webhook.secret}")
     private String endpointSecret;
@@ -354,6 +357,47 @@ public class SubscriptionController {
                 System.err.println("⚠️ No se pudo obtener invoice ID");
             }
 
+        } else if ("payment_intent.succeeded".equals(eventType)) {
+            System.out.println("➡️ Evento: payment_intent.succeeded");
+            
+            com.stripe.model.PaymentIntent paymentIntent = (com.stripe.model.PaymentIntent) event.getDataObjectDeserializer().getObject().orElse(null);
+            if (paymentIntent != null) {
+                String type = paymentIntent.getMetadata().get("type");
+                if ("verification_access".equals(type)) {
+                    String postId = paymentIntent.getMetadata().get("postId");
+                    String userId = paymentIntent.getMetadata().get("userId");
+                    
+                    System.out.println("🔍 Procesando pago de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
+                    
+                    try {
+                        UserEntity user = userRepository.findById(Long.parseLong(userId)).orElse(null);
+                        if (user != null) {
+                            // Desbloquear acceso a la verificación específica
+                            org.cinos.core.posts.entity.PostEntity post = postRepository.findById(Long.parseLong(postId)).orElse(null);
+                            if (post != null) {
+                                if (!user.getUnlockedTechnicalVerifications().contains(post)) {
+                                    user.getUnlockedTechnicalVerifications().add(post);
+                                    userRepository.save(user);
+                                    System.out.println("🔓 Acceso a verificación desbloqueado para usuario: " + user.getEmail() + " y post: " + postId);
+                                } else {
+                                    System.out.println("ℹ️ Usuario ya tenía acceso a esta verificación: " + user.getEmail() + " y post: " + postId);
+                                }
+                            } else {
+                                System.err.println("❌ Post no encontrado con ID: " + postId);
+                            }
+                        } else {
+                            System.err.println("❌ Usuario no encontrado con ID: " + userId);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error al procesar acceso a verificación: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("ℹ️ Tipo de pago no manejado: " + type);
+                }
+            } else {
+                System.err.println("❌ PaymentIntent es null");
+            }
         } else if ("customer.subscription.deleted".equals(eventType)) {
             System.out.println("➡️ Evento: customer.subscription.deleted");
             String rawJson = event.getDataObjectDeserializer().getRawJson();
@@ -382,4 +426,18 @@ public class SubscriptionController {
         return ResponseEntity.ok("Webhook processed successfully");
     }
 
+    /**
+     * Compra acceso a un informe técnico específico
+     */
+    @PostMapping("/buy-verification-access")
+    public ResponseEntity<Map<String, String>> buyVerificationAccess(
+            @RequestBody BuyVerificationAccessRequest request,
+            @AuthenticationPrincipal UserEntity user) {
+        try {
+            String clientSecret = stripeService.createVerificationAccessPaymentIntent(request.postId(), user);
+            return ResponseEntity.ok(Map.of("clientSecret", clientSecret));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

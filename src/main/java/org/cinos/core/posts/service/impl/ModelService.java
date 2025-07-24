@@ -26,10 +26,10 @@ public class ModelService implements IModelService {
         return modelRepository.findByMake_Name(makeName).stream()
                 .sorted(Comparator.comparing(e -> e.getName(), String.CASE_INSENSITIVE_ORDER))
                 .map(e->
-                        ModelDTO.builder()
-                                .id(e.getId())
-                                .name(e.getName())
-                                .build()
-                ).toList();
+                ModelDTO.builder()
+                        .id(e.getId())
+                        .name(e.getName())
+                        .build()
+        ).toList();
     }
 }

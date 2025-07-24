@@ -18,6 +18,7 @@ import org.cinos.core.users.entity.UserEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import org.cinos.core.users.repository.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
     private final PostRepository postRepository;
     private final MailService mailService;
     private final TechnicalVerificationRepository technicalVerificationRepository;
+    private final UserRepository userRepository;
 
     @Override
     public void orderVerification(final OrderVerificationRequest orderVerificationRequest) throws PostNotFoundException {
@@ -213,13 +215,17 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
     @Override
     public VerificationStatusResponse getStatusByPostId(Long postId) throws PostNotFoundException {
         PostEntity post = postRepository.findById(postId).orElseThrow(() -> new PostNotFoundException("No se encontró la publicación con id " + postId));
+        TechnicalVerification technicalVerification = post.getTechnicalVerification();
+        if (technicalVerification == null) {
+            throw new PostNotFoundException("No se encontró verificación técnica para la publicación con id " + postId);
+        }
         return VerificationStatusResponse.builder()
-                .status(post.getTechnicalVerification().getStatus())
-                .isApproved(post.getTechnicalVerification().getIsApproved())
-                .sentToVerificationDate(post.getTechnicalVerification().getSentToVerificationDate())
-                .verificationAcceptedDate(post.getTechnicalVerification().getVerificationAcceptedDate())
-                .verificationAppointmentDate(post.getTechnicalVerification().getVerificationAppointmentDate())
-                .verificationMadeDate(post.getTechnicalVerification().getVerificationMadeDate())
+                .status(technicalVerification.getStatus())
+                .sentToVerificationDate(technicalVerification.getSentToVerificationDate())
+                .verificationAcceptedDate(technicalVerification.getVerificationAcceptedDate())
+                .verificationAppointmentDate(technicalVerification.getVerificationAppointmentDate())
+                .isApproved(technicalVerification.getIsApproved())
+                .verificationMadeDate(technicalVerification.getVerificationMadeDate())
                 .build();
     }
 
