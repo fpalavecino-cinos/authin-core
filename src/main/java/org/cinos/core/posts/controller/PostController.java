@@ -161,5 +161,26 @@ public class PostController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/{id}/technical-verification-status")
+    public ResponseEntity<?> getTechnicalVerificationStatus(@PathVariable Long id) {
+        try {
+            var post = postService.getPostEntityById(id);
+            var technicalVerification = post.getTechnicalVerification();
+            if (technicalVerification == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(org.cinos.core.technical_verification.dto.VerificationStatusResponse.builder()
+                    .status(technicalVerification.getStatus())
+                    .sentToVerificationDate(technicalVerification.getSentToVerificationDate())
+                    .verificationAcceptedDate(technicalVerification.getVerificationAcceptedDate())
+                    .verificationAppointmentDate(technicalVerification.getVerificationAppointmentDate())
+                    .isApproved(technicalVerification.getIsApproved())
+                    .verificationMadeDate(technicalVerification.getVerificationMadeDate())
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("No se pudo obtener el informe técnico: " + e.getMessage());
+        }
+    }
+
 
 }
