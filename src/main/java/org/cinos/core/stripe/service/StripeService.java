@@ -141,7 +141,30 @@ public class StripeService {
      */
     public boolean confirmPayment(String paymentIntentId) throws StripeException {
         PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
-        return "succeeded".equals(paymentIntent.getStatus());
+        
+        // Si el pago ya está confirmado, retornar true
+        if ("succeeded".equals(paymentIntent.getStatus())) {
+            return true;
+        }
+        
+        // Si el pago requiere confirmación, confirmarlo con un token de prueba
+        if ("requires_payment_method".equals(paymentIntent.getStatus()) || "requires_confirmation".equals(paymentIntent.getStatus())) {
+            // Usar un token de prueba de Stripe (tok_visa)
+            Map<String, Object> confirmParams = new HashMap<>();
+            confirmParams.put("payment_method_data", Map.of(
+                "type", "card",
+                "card", Map.of(
+                    "token", "tok_visa"
+                )
+            ));
+            
+            paymentIntent = paymentIntent.confirm(confirmParams);
+            System.out.println("✅ PaymentIntent confirmado con estado: " + paymentIntent.getStatus());
+            
+            return "succeeded".equals(paymentIntent.getStatus());
+        }
+        
+        return false;
     }
 
     /**
@@ -216,32 +239,44 @@ public class StripeService {
             .putMetadata("userId", user.getId().toString())
             .putMetadata("type", "verification_access")
             .setDescription("Acceso a informe técnico")
-            .setAutomaticPaymentMethods(
-                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                    .setEnabled(true)
-                    .setAllowRedirects(PaymentIntentCreateParams.AutomaticPaymentMethods.AllowRedirects.NEVER)
-                    .build()
-            )
             .build();
 
         PaymentIntent paymentIntent = PaymentIntent.create(params);
         System.out.println("🔧 PaymentIntent creado con ID: " + paymentIntent.getId() + " y estado: " + paymentIntent.getStatus());
         
-        // Confirmar el PaymentIntent inmediatamente con un método de pago de prueba
-        Map<String, Object> confirmParams = new HashMap<>();
-        confirmParams.put("payment_method_data", Map.of(
-            "type", "card",
-            "card", Map.of(
-                "number", "4242424242424242",
-                "exp_month", 12,
-                "exp_year", 2024,
-                "cvc", "123"
-            )
-        ));
-        
-        paymentIntent = paymentIntent.confirm(confirmParams);
-        System.out.println("✅ PaymentIntent confirmado con estado: " + paymentIntent.getStatus());
-        
         return paymentIntent.getClientSecret();
+    }
+
+    public String createVerificationAccessCheckoutSession(Long postId, UserEntity user, String successUrl, String cancelUrl) throws StripeException {
+        // Crear sesión de Stripe Checkout para acceso a verificación
+        SessionCreateParams params = SessionCreateParams.builder()
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl(successUrl)
+                .setCancelUrl(cancelUrl)
+                .addLineItem(
+                        SessionCreateParams.LineItem.builder()
+                                .setPriceData(
+                                        SessionCreateParams.LineItem.PriceData.builder()
+                                                .setCurrency("usd")
+                                                .setProductData(
+                                                        SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                                                .setName("Acceso a Informe Técnico")
+                                                                .setDescription("Desbloquea el acceso al informe técnico detallado")
+                                                                .build()
+                                                )
+                                                .setUnitAmount(499L) // $4.99 en centavos
+                                                .build()
+                                )
+                                .setQuantity(1L)
+                                .build()
+                )
+                .setCustomerEmail(user.getEmail())
+                .putMetadata("postId", postId.toString())
+                .putMetadata("userId", user.getId().toString())
+                .putMetadata("type", "verification_access")
+                .build();
+
+        Session session = Session.create(params);
+        return session.getUrl();
     }
 }

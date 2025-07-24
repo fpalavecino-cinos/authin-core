@@ -234,6 +234,48 @@ public class SubscriptionController {
     }
 
     /**
+     * Crea una sesión de Stripe Checkout para acceso a verificación técnica
+     */
+    @PostMapping("/verification-access-checkout")
+    public ResponseEntity<SubscriptionResponse> createVerificationAccessCheckoutSession(
+            @RequestBody BuyVerificationAccessRequest request) {
+        try {
+            if (request.postId() == null) {
+                return ResponseEntity.badRequest()
+                        .body(SubscriptionResponse.builder()
+                                .message("Post ID es requerido")
+                                .success(false)
+                                .build());
+            }
+
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+
+            String successUrl = "https://yourdomain.com/verification-access-success?postId=" + request.postId();
+            String cancelUrl = "https://yourdomain.com/verification-access-cancel";
+
+            String checkoutUrl = stripeService.createVerificationAccessCheckoutSession(
+                request.postId(), 
+                userEntity, 
+                successUrl, 
+                cancelUrl
+            );
+
+            return ResponseEntity.ok(SubscriptionResponse.builder()
+                    .checkoutUrl(checkoutUrl)
+                    .success(true)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(SubscriptionResponse.builder()
+                            .message("Error: " + e.getMessage())
+                            .success(false)
+                            .build());
+        }
+    }
+
+    /**
      * Endpoint de prueba para simular la actualización a premium
      */
     @PostMapping("/test-upgrade/{email}")
@@ -332,7 +374,41 @@ public class SubscriptionController {
             if (session != null) {
                 String email = session.getCustomerDetails().getEmail();
                 System.out.println("Email cliente: " + email);
-                // No se actualiza rol aquí, solo logging
+                
+                // Verificar si es un pago de acceso a verificación
+                String type = session.getMetadata().get("type");
+                if ("verification_access".equals(type)) {
+                    String postId = session.getMetadata().get("postId");
+                    String userId = session.getMetadata().get("userId");
+                    
+                    System.out.println("🔍 Procesando checkout de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
+                    
+                    try {
+                        UserEntity user = userRepository.findById(Long.parseLong(userId)).orElse(null);
+                        if (user != null) {
+                            // Desbloquear acceso a la verificación específica
+                            org.cinos.core.posts.entity.PostEntity post = postRepository.findById(Long.parseLong(postId)).orElse(null);
+                            if (post != null) {
+                                if (!user.getUnlockedTechnicalVerifications().contains(post)) {
+                                    user.getUnlockedTechnicalVerifications().add(post);
+                                    userRepository.save(user);
+                                    System.out.println("🔓 Acceso a verificación desbloqueado para usuario: " + user.getEmail() + " y post: " + postId);
+                                } else {
+                                    System.out.println("ℹ️ Usuario ya tenía acceso a esta verificación: " + user.getEmail() + " y post: " + postId);
+                                }
+                            } else {
+                                System.err.println("❌ Post no encontrado con ID: " + postId);
+                            }
+                        } else {
+                            System.err.println("❌ Usuario no encontrado con ID: " + userId);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Error al procesar acceso a verificación: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("ℹ️ Tipo de checkout no manejado: " + type);
+                }
             } else {
                 System.err.println("❌ Session es null");
             }
