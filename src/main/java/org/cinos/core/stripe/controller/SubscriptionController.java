@@ -479,28 +479,37 @@ public class SubscriptionController {
 
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
             com.stripe.model.Invoice invoice = null;
+            Map<String, Object> invoiceMap = null;
             if (deserializer.getObject().isPresent()) {
                 Object dataObject = deserializer.getObject().get();
                 if (dataObject instanceof com.stripe.model.Invoice) {
                     invoice = (com.stripe.model.Invoice) dataObject;
                 }
             } else {
-                // Deserialización manual si el SDK no puede
+                // Deserialización manual a Map si el SDK no puede
                 String rawJson = deserializer.getRawJson();
                 System.err.println("No se pudo deserializar el objeto Invoice. JSON crudo: " + rawJson);
                 try {
                     ObjectMapper mapper = new ObjectMapper();
-                    invoice = mapper.readValue(rawJson, com.stripe.model.Invoice.class);
+                    invoiceMap = mapper.readValue(rawJson, Map.class);
                 } catch (Exception ex) {
                     System.err.println("Error al mapear manualmente el Invoice: " + ex.getMessage());
                     return ResponseEntity.badRequest().body("No se pudo deserializar el objeto Invoice");
                 }
             }
 
-            String invoiceId = invoice != null ? invoice.getId() : null;
+            String invoiceId = null;
+            if (invoice != null) {
+                invoiceId = invoice.getId();
+            } else if (invoiceMap != null) {
+                invoiceId = (String) invoiceMap.get("id");
+            }
+
             if (invoiceId != null) {
                 try {
-                    invoice = com.stripe.model.Invoice.retrieve(invoiceId);
+                    if (invoice == null) {
+                        invoice = com.stripe.model.Invoice.retrieve(invoiceId);
+                    }
                     String customerId = invoice.getCustomer();
                     com.stripe.model.Customer customer = com.stripe.model.Customer.retrieve(customerId);
                     String email = customer.getEmail();
