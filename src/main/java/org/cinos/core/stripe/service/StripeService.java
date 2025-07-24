@@ -224,6 +224,23 @@ public class StripeService {
             .build();
 
         PaymentIntent paymentIntent = PaymentIntent.create(params);
+        System.out.println("🔧 PaymentIntent creado con ID: " + paymentIntent.getId() + " y estado: " + paymentIntent.getStatus());
+        
+        // Confirmar el PaymentIntent inmediatamente con un método de pago de prueba
+        Map<String, Object> confirmParams = new HashMap<>();
+        confirmParams.put("payment_method_data", Map.of(
+            "type", "card",
+            "card", Map.of(
+                "number", "4242424242424242",
+                "exp_month", 12,
+                "exp_year", 2024,
+                "cvc", "123"
+            )
+        ));
+        
+        paymentIntent = paymentIntent.confirm(confirmParams);
+        System.out.println("✅ PaymentIntent confirmado con estado: " + paymentIntent.getStatus());
+        
         return paymentIntent.getClientSecret();
     }
 }

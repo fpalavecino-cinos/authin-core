@@ -400,6 +400,7 @@ public class SubscriptionController {
             com.stripe.model.PaymentIntent paymentIntent = (com.stripe.model.PaymentIntent) event.getDataObjectDeserializer().getObject().orElse(null);
             if (paymentIntent != null) {
                 String type = paymentIntent.getMetadata().get("type");
+                
                 if ("verification_access".equals(type)) {
                     String postId = paymentIntent.getMetadata().get("postId");
                     String userId = paymentIntent.getMetadata().get("userId");
