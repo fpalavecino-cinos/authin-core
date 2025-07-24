@@ -266,6 +266,43 @@ public class SubscriptionController {
     }
 
     /**
+     * Endpoint de prueba para simular el webhook payment_intent.succeeded
+     */
+    @PostMapping("/test-verification-access/{postId}/{userId}")
+    public ResponseEntity<String> testVerificationAccessWebhook(
+            @PathVariable Long postId,
+            @PathVariable Long userId) {
+        try {
+            UserEntity user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                // Desbloquear acceso a la verificación específica
+                org.cinos.core.posts.entity.PostEntity post = postRepository.findById(postId).orElse(null);
+                if (post != null) {
+                    if (!user.getUnlockedTechnicalVerifications().contains(post)) {
+                        user.getUnlockedTechnicalVerifications().add(post);
+                        userRepository.save(user);
+                        System.out.println("🔓 [TEST] Acceso a verificación desbloqueado para usuario: " + user.getEmail() + " y post: " + postId);
+                        return ResponseEntity.ok("Acceso desbloqueado exitosamente para usuario: " + user.getEmail() + " y post: " + postId);
+                    } else {
+                        System.out.println("ℹ️ [TEST] Usuario ya tenía acceso a esta verificación: " + user.getEmail() + " y post: " + postId);
+                        return ResponseEntity.ok("Usuario ya tenía acceso a esta verificación");
+                    }
+                } else {
+                    System.err.println("❌ [TEST] Post no encontrado con ID: " + postId);
+                    return ResponseEntity.badRequest().body("Post no encontrado con ID: " + postId);
+                }
+            } else {
+                System.err.println("❌ [TEST] Usuario no encontrado con ID: " + userId);
+                return ResponseEntity.badRequest().body("Usuario no encontrado con ID: " + userId);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ [TEST] Error al procesar acceso a verificación: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    /**
      * Webhook de Stripe para eventos de suscripción
      */
     @PostMapping("/webhook")

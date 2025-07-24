@@ -5,6 +5,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Invoice;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.PaymentMethod;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.PaymentIntentCreateParams;
@@ -215,6 +216,11 @@ public class StripeService {
             .putMetadata("userId", user.getId().toString())
             .putMetadata("type", "verification_access")
             .setDescription("Acceso a informe técnico")
+            .setAutomaticPaymentMethods(
+                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                    .setEnabled(true)
+                    .build()
+            )
             .build();
 
         PaymentIntent paymentIntent = PaymentIntent.create(params);
