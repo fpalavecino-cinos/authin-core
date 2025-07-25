@@ -252,7 +252,7 @@ public class SubscriptionController {
             UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             UserEntity userEntity = (UserEntity) authentication.getPrincipal();
 
-            String successUrl = "http://localhost:8100/post/" + request.postId();
+            String successUrl = "http://localhost:8100/post/" + request.postId() + "?justBought=true";
             String cancelUrl = "http://localhost:8100/post/" + request.postId();
 
             String checkoutUrl = stripeService.createVerificationAccessCheckoutSession(
@@ -480,14 +480,14 @@ public class SubscriptionController {
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
             com.stripe.model.Invoice invoice = null;
             Map<String, Object> invoiceMap = null;
-            if (deserializer.getObject().isPresent()) {
-                Object dataObject = deserializer.getObject().get();
-                if (dataObject instanceof com.stripe.model.Invoice) {
+                if (deserializer.getObject().isPresent()) {
+                    Object dataObject = deserializer.getObject().get();
+                    if (dataObject instanceof com.stripe.model.Invoice) {
                     invoice = (com.stripe.model.Invoice) dataObject;
-                }
-            } else {
+                    }
+                } else {
                 // Deserialización manual a Map si el SDK no puede
-                String rawJson = deserializer.getRawJson();
+                    String rawJson = deserializer.getRawJson();
                 System.err.println("No se pudo deserializar el objeto Invoice. JSON crudo: " + rawJson);
                 try {
                     ObjectMapper mapper = new ObjectMapper();
@@ -541,7 +541,7 @@ public class SubscriptionController {
 
         } else if ("payment_intent.succeeded".equals(eventType)) {
             System.out.println("➡️ Evento: payment_intent.succeeded");
-
+            
             EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
             com.stripe.model.PaymentIntent paymentIntent = null;
             if (deserializer.getObject().isPresent()) {
@@ -567,9 +567,9 @@ public class SubscriptionController {
                 if ("verification_access".equals(type)) {
                     String postId = paymentIntent.getMetadata().get("postId");
                     String userId = paymentIntent.getMetadata().get("userId");
-
+                    
                     System.out.println("🔍 Procesando pago de acceso a verificación - PostId: " + postId + ", UserId: " + userId);
-
+                    
                     try {
                         UserEntity user = userRepository.findById(Long.parseLong(userId)).orElse(null);
                         if (user != null) {

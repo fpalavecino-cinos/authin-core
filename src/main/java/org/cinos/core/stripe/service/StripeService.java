@@ -161,7 +161,7 @@ public class StripeService {
             paymentIntent = paymentIntent.confirm(confirmParams);
             System.out.println("✅ PaymentIntent confirmado con estado: " + paymentIntent.getStatus());
             
-            return "succeeded".equals(paymentIntent.getStatus());
+        return "succeeded".equals(paymentIntent.getStatus());
         }
         
         return false;
