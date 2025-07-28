@@ -16,6 +16,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 
 @RestController
 @RequestMapping("/messages")
@@ -52,7 +54,7 @@ public class MessageController {
                         message.getSender().getId(),
                         message.getRecipient().getId(),
                         message.getContent(),
-                        message.getTimestamp()
+                        message.getTimestamp().atZone(ZoneId.systemDefault())
                 ))
                 .toList();
 

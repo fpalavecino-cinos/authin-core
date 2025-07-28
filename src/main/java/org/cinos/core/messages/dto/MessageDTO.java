@@ -2,7 +2,7 @@ package org.cinos.core.messages.dto;
 
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Builder
 public record MessageDTO(
@@ -10,5 +10,5 @@ public record MessageDTO(
         Long senderId,
         Long recipientId,
         String content,
-        LocalDateTime timestamp
+        ZonedDateTime timestamp
 ) {}

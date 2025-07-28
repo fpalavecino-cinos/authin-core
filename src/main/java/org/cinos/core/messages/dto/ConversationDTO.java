@@ -2,12 +2,12 @@ package org.cinos.core.messages.dto;
 
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Builder
 public record ConversationDTO(
         Long id,
-        LocalDateTime lastUpdated,
+        ZonedDateTime lastUpdated,
         String lastMessage,
         Long receiverId,
         String receiverName,

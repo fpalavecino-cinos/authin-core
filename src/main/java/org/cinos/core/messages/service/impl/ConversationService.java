@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,7 +43,7 @@ public class ConversationService implements IConversationService {
 
             ConversationEntity newConversation = ConversationEntity.builder()
                     .participants(Set.of(user1, user2))
-                    .lastUpdated(LocalDateTime.now())
+                    .lastUpdated(ZonedDateTime.now(ZoneId.systemDefault()).toLocalDateTime())
                     .build();
 
             return conversationRepository.save(newConversation);
@@ -56,7 +58,7 @@ public class ConversationService implements IConversationService {
 
         return ConversationDTO.builder()
                 .id(conversation.getId())
-                .lastUpdated(conversation.getLastUpdated())
+                .lastUpdated(conversation.getLastUpdated().atZone(ZoneId.systemDefault()))
                 .receiverId(receiver.getId())
                 .receiverName(receiver.getUser().getName() + " " + receiver.getUser().getLastname())
                 .receiverAvatar(receiver.getAvatarImg())
@@ -83,7 +85,7 @@ public class ConversationService implements IConversationService {
 
                     return ConversationDTO.builder()
                             .id(conversation.getId())
-                            .lastUpdated(conversation.getLastUpdated())
+                            .lastUpdated(conversation.getLastUpdated().atZone(ZoneId.systemDefault()))
                             .lastMessage(lastMessage)
                             .receiverName(receiver.getUser().getName() + " " + receiver.getUser().getLastname()) // <- suponiendo que tenés un método getUser() en AccountEntity
                             .receiverAvatar(receiver.getAvatarImg()) // <- suponiendo que tenés avatarUrl en AccountEntity
@@ -106,7 +108,7 @@ public class ConversationService implements IConversationService {
 
         return ConversationDTO.builder()
                 .id(conversation.getId())
-                .lastUpdated(conversation.getLastUpdated())
+                .lastUpdated(conversation.getLastUpdated().atZone(ZoneId.systemDefault()))
                 .receiverId(receiver.getId())
                 .receiverName(receiver.getUser().getName() + " " + receiver.getUser().getLastname()) // <- suponiendo que tenés un método getUser() en AccountEntity
                 .receiverAvatar(receiver.getAvatarImg()) // <- suponiendo que tenés avatarUrl en AccountEntity

@@ -113,9 +113,32 @@ public class StripeService {
      * Cancela una suscripción activa
      */
     public void cancelSubscription(String subscriptionId) throws StripeException {
-        Subscription subscription = Subscription.retrieve(subscriptionId);
-        subscription.cancel();
-        // Actualiza tu base de datos para marcar al usuario como no premium
+        try {
+            Subscription subscription = Subscription.retrieve(subscriptionId);
+            
+            // Verificar que la suscripción existe y está activa
+            if (subscription == null) {
+                throw new RuntimeException("Suscripción no encontrada");
+            }
+            
+            if (!"active".equals(subscription.getStatus()) && !"trialing".equals(subscription.getStatus())) {
+                throw new RuntimeException("La suscripción no está activa para cancelar");
+            }
+            
+            // Cancelar la suscripción al final del período actual
+            Map<String, Object> cancelParams = new HashMap<>();
+            cancelParams.put("cancel_at_period_end", true);
+            subscription.update(cancelParams);
+            
+            System.out.println("✅ Suscripción " + subscriptionId + " cancelada exitosamente");
+            
+        } catch (StripeException e) {
+            System.err.println("❌ Error al cancelar suscripción: " + e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error de validación: " + e.getMessage());
+            throw e;
+        }
     }
 
     /**

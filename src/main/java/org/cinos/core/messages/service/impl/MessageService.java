@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -37,7 +39,7 @@ public class MessageService implements IMessageService {
                 .recipient(accountService.getAccountEntityById(recipientId))
                 .content(content)
                 .status(MessageStatus.SENT)
-                .timestamp(LocalDateTime.now())
+                .timestamp(ZonedDateTime.now(ZoneId.systemDefault()).toLocalDateTime())
                 .build();
 
         MessageEntity savedMessage = messageRepository.save(message);
@@ -56,7 +58,7 @@ public class MessageService implements IMessageService {
                 messageDTO
         );
 
-        conversationEntity.setLastUpdated(LocalDateTime.now());
+        conversationEntity.setLastUpdated(ZonedDateTime.now(ZoneId.systemDefault()).toLocalDateTime());
         conversationService.save(conversationEntity);
 
         return messageDTO;

@@ -27,6 +27,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("subscriptions")
@@ -97,23 +98,67 @@ public class SubscriptionController {
     }
 
     /**
+     * Obtiene información detallada de la suscripción del usuario
+     */
+    @GetMapping("/details")
+    public ResponseEntity<SubscriptionResponse> getSubscriptionDetails() {
+        try {
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            
+            if (userEntity.getStripeSubscriptionId() == null || userEntity.getStripeSubscriptionId().isEmpty()) {
+                return ResponseEntity.ok(SubscriptionResponse.builder()
+                        .message("No tienes una suscripción activa")
+                        .success(false)
+                        .build());
+            }
+            
+            // Obtener información de la suscripción desde Stripe
+            String status = stripeService.getSubscriptionStatus(userEntity.getId().toString());
+            Long nextRenewal = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
+            
+            return ResponseEntity.ok(SubscriptionResponse.builder()
+                    .message("Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000))
+                    .success(true)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
+        }
+    }
+
+    /**
      * Cancela una suscripción
      */
     @PostMapping("/cancel")
-    public ResponseEntity<SubscriptionResponse> cancelSubscription(@RequestBody String subscriptionId) {
+    public ResponseEntity<SubscriptionResponse> cancelSubscription() {
         try {
-            if (subscriptionId == null || subscriptionId.isEmpty()) {
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            
+            if (userEntity.getStripeSubscriptionId() == null || userEntity.getStripeSubscriptionId().isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(SubscriptionResponse.builder()
-                                .message("Subscription ID es requerido")
+                                .message("No tienes una suscripción activa para cancelar")
                                 .success(false)
                                 .build());
             }
 
-            stripeService.cancelSubscription(subscriptionId);
+            // Cancelar suscripción en Stripe
+            stripeService.cancelSubscription(userEntity.getStripeSubscriptionId());
+            
+            // Actualizar usuario en la base de datos
+            userEntity.setRoles(userEntity.getRoles().stream()
+                    .filter(role -> role != Role.PREMIUM)
+                    .collect(Collectors.toList()));
+            userEntity.setStripeSubscriptionId(null);
+            userRepository.save(userEntity);
+            
             return ResponseEntity.ok(
                     SubscriptionResponse.builder()
-                            .message("Suscripción cancelada exitosamente")
+                            .message("Suscripción cancelada exitosamente. Tu acceso premium se mantendrá hasta el final del período actual.")
                             .success(true)
                             .build());
         } catch (Exception e) {
