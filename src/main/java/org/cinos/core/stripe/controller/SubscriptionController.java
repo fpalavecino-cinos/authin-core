@@ -98,7 +98,7 @@ public class SubscriptionController {
     }
 
     /**
-     * Obtiene información detallada de la suscripción del usuario
+     * Obtiene los detalles de la suscripción del usuario
      */
     @GetMapping("/details")
     public ResponseEntity<SubscriptionResponse> getSubscriptionDetails() {
@@ -118,8 +118,15 @@ public class SubscriptionController {
             String status = stripeService.getSubscriptionStatus(userEntity.getId().toString());
             Long nextRenewal = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
             
+            String message;
+            if ("canceled".equals(status)) {
+                message = "Estado: Cancelada (activa hasta el final del período), Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
+            } else {
+                message = "Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
+            }
+            
             return ResponseEntity.ok(SubscriptionResponse.builder()
-                    .message("Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000))
+                    .message(message)
                     .success(true)
                     .build());
         } catch (Exception e) {
@@ -146,15 +153,12 @@ public class SubscriptionController {
                                 .build());
             }
 
-            // Cancelar suscripción en Stripe
+            // Cancelar suscripción en Stripe (solo marca para cancelar al final del período)
             stripeService.cancelSubscription(userEntity.getStripeSubscriptionId());
             
-            // Actualizar usuario en la base de datos
-            userEntity.setRoles(userEntity.getRoles().stream()
-                    .filter(role -> role != Role.PREMIUM)
-                    .collect(Collectors.toList()));
-            userEntity.setStripeSubscriptionId(null);
-            userRepository.save(userEntity);
+            // NO eliminar el rol premium inmediatamente - se mantendrá hasta el final del período
+            // El rol premium se eliminará automáticamente cuando Stripe envíe el webhook de cancelación
+            // o cuando el período actual termine
             
             return ResponseEntity.ok(
                     SubscriptionResponse.builder()
@@ -660,6 +664,38 @@ public class SubscriptionController {
                 user.setStripeSubscriptionId(null);
                 userRepository.save(user);
                 System.out.println("🚨 Rol PREMIUM removido y subscriptionId limpiado para usuario: " + user.getEmail());
+            } else {
+                System.err.println("❌ Usuario no encontrado con subscriptionId: " + subscriptionId);
+            }
+        } else if ("customer.subscription.updated".equals(eventType)) {
+            System.out.println("➡️ Evento: customer.subscription.updated");
+            String rawJson = event.getDataObjectDeserializer().getRawJson();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(rawJson);
+            String subscriptionId = root.get("id").asText();
+            String status = root.get("status").asText();
+            System.out.println("📦 subscriptionId: " + subscriptionId + ", status: " + status);
+            
+            var userOpt = userRepository.findByStripeSubscriptionId(subscriptionId);
+            if (userOpt.isPresent()) {
+                UserEntity user = userOpt.get();
+                
+                // Si la suscripción se canceló pero aún está activa hasta el final del período
+                if ("canceled".equals(status) || "unpaid".equals(status)) {
+                    System.out.println("⚠️ Suscripción cancelada pero aún activa hasta el final del período para usuario: " + user.getEmail());
+                    // El rol premium se mantiene hasta que la suscripción realmente termine
+                } else if ("active".equals(status) || "trialing".equals(status)) {
+                    System.out.println("✅ Suscripción activa para usuario: " + user.getEmail());
+                    // Asegurar que el usuario tenga rol premium
+                    if (user.getRoles() == null) {
+                        user.setRoles(new ArrayList<>());
+                    }
+                    if (!user.getRoles().contains(Role.PREMIUM)) {
+                        user.getRoles().add(Role.PREMIUM);
+                        userRepository.save(user);
+                        System.out.println("🚀 Rol PREMIUM agregado para usuario: " + user.getEmail());
+                    }
+                }
             } else {
                 System.err.println("❌ Usuario no encontrado con subscriptionId: " + subscriptionId);
             }
