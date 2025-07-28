@@ -114,16 +114,21 @@ public class SubscriptionController {
                         .build());
             }
             
+            // Verificar si la suscripción está cancelada
+            boolean isCanceled = stripeService.isSubscriptionCanceled(userEntity.getStripeSubscriptionId());
+            
+            if (isCanceled) {
+                return ResponseEntity.ok(SubscriptionResponse.builder()
+                        .message("Suscripción cancelada - No se renovará automáticamente")
+                        .success(false)
+                        .build());
+            }
+            
             // Obtener información de la suscripción desde Stripe
             String status = stripeService.getSubscriptionStatus(userEntity.getId().toString());
             Long nextRenewal = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
             
-            String message;
-            if ("canceled".equals(status)) {
-                message = "Estado: Cancelada (activa hasta el final del período), Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
-            } else {
-                message = "Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
-            }
+            String message = "Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
             
             return ResponseEntity.ok(SubscriptionResponse.builder()
                     .message(message)

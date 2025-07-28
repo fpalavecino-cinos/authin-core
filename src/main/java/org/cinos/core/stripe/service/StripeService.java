@@ -110,15 +110,25 @@ public class StripeService {
     }
 
     /**
-     * Cancela una suscripción activa
+     * Cancela una suscripción
      */
     public void cancelSubscription(String subscriptionId) throws StripeException {
         try {
             Subscription subscription = Subscription.retrieve(subscriptionId);
             
-            // Verificar que la suscripción existe y está activa
+            // Verificar que la suscripción existe
             if (subscription == null) {
                 throw new RuntimeException("Suscripción no encontrada");
+            }
+            
+            // Verificar si ya está cancelada
+            if ("canceled".equals(subscription.getStatus())) {
+                throw new RuntimeException("La suscripción ya está cancelada");
+            }
+            
+            // Verificar si ya está marcada para cancelar al final del período
+            if (Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd())) {
+                throw new RuntimeException("La suscripción ya está marcada para cancelar al final del período");
             }
             
             if (!"active".equals(subscription.getStatus()) && !"trialing".equals(subscription.getStatus())) {
@@ -137,6 +147,26 @@ public class StripeService {
             throw e;
         } catch (RuntimeException e) {
             System.err.println("❌ Error de validación: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Verifica si una suscripción está cancelada o marcada para cancelar
+     */
+    public boolean isSubscriptionCanceled(String subscriptionId) throws StripeException {
+        try {
+            Subscription subscription = Subscription.retrieve(subscriptionId);
+            
+            if (subscription == null) {
+                return false;
+            }
+            
+            // Verificar si está cancelada o marcada para cancelar
+            return "canceled".equals(subscription.getStatus()) || 
+                   Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd());
+        } catch (StripeException e) {
+            System.err.println("❌ Error al verificar estado de cancelación: " + e.getMessage());
             throw e;
         }
     }
