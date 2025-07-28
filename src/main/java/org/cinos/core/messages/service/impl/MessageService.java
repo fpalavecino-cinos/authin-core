@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -39,7 +38,7 @@ public class MessageService implements IMessageService {
                 .recipient(accountService.getAccountEntityById(recipientId))
                 .content(content)
                 .status(MessageStatus.SENT)
-                .timestamp(ZonedDateTime.now(ZoneId.systemDefault()).toLocalDateTime())
+                .timestamp(LocalDateTime.now())
                 .build();
 
         MessageEntity savedMessage = messageRepository.save(message);
@@ -49,7 +48,7 @@ public class MessageService implements IMessageService {
                 savedMessage.getSender().getId(),
                 savedMessage.getRecipient().getId(),
                 savedMessage.getContent(),
-                savedMessage.getTimestamp()
+                savedMessage.getTimestamp().atZone(ZoneId.systemDefault())
         );
         // Actualizar WebSocket
         messagingTemplate.convertAndSendToUser(
@@ -58,7 +57,7 @@ public class MessageService implements IMessageService {
                 messageDTO
         );
 
-        conversationEntity.setLastUpdated(ZonedDateTime.now(ZoneId.systemDefault()).toLocalDateTime());
+        conversationEntity.setLastUpdated(LocalDateTime.now());
         conversationService.save(conversationEntity);
 
         return messageDTO;
