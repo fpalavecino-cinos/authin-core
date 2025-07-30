@@ -116,6 +116,7 @@ public class SubscriptionController {
                 return ResponseEntity.ok(SubscriptionResponse.builder()
                         .message("No tienes una suscripción activa")
                         .success(false)
+                        .estado("SIN_SUSCRIPCION")
                         .build());
             }
             
@@ -128,6 +129,7 @@ public class SubscriptionController {
                 return ResponseEntity.ok(SubscriptionResponse.builder()
                         .message("Suscripción cancelada - No se renovará automáticamente")
                         .success(false)
+                        .estado("CANCELADA")
                         .build());
             }
             
@@ -141,12 +143,13 @@ public class SubscriptionController {
             return ResponseEntity.ok(SubscriptionResponse.builder()
                     .message(message)
                     .success(true)
+                    .estado("ACTIVA")
                     .build());
         } catch (Exception e) {
             System.err.println("❌ Error en getSubscriptionDetails: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.badRequest()
-                    .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
+                    .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).estado("ERROR").build());
         }
     }
 
