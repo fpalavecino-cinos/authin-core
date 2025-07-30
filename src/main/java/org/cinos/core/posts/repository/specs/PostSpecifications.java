@@ -168,7 +168,7 @@ public class PostSpecifications {
             }
 
             if (filter.model() != null) {
-                predicates.add(cb.equal(root.get("model"), filter.model()));
+                predicates.add(root.get("model").in(filter.model()));
             }
 
             if (filter.minYear() != null) {

@@ -152,19 +152,62 @@ public class StripeService {
     }
 
     /**
+     * Reactiva una suscripción cancelada o marcada para cancelar
+     */
+    public void reactivateSubscription(String subscriptionId) throws StripeException {
+        try {
+            Subscription subscription = Subscription.retrieve(subscriptionId);
+            
+            // Verificar que la suscripción existe
+            if (subscription == null) {
+                throw new RuntimeException("Suscripción no encontrada");
+            }
+            
+            // Verificar si está cancelada o marcada para cancelar
+            if (!"canceled".equals(subscription.getStatus()) && !Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd())) {
+                throw new RuntimeException("La suscripción no está cancelada o marcada para cancelar");
+            }
+            
+            // Reactivar la suscripción
+            Map<String, Object> reactivateParams = new HashMap<>();
+            reactivateParams.put("cancel_at_period_end", false);
+            subscription.update(reactivateParams);
+            
+            System.out.println("✅ Suscripción " + subscriptionId + " reactivada exitosamente");
+            
+        } catch (StripeException e) {
+            System.err.println("❌ Error al reactivar suscripción: " + e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error de validación: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
      * Verifica si una suscripción está cancelada o marcada para cancelar
      */
     public boolean isSubscriptionCanceled(String subscriptionId) throws StripeException {
         try {
+            System.out.println("🔍 Verificando cancelación para subscriptionId: " + subscriptionId);
             Subscription subscription = Subscription.retrieve(subscriptionId);
             
             if (subscription == null) {
+                System.out.println("❌ Subscription es null");
                 return false;
             }
             
+            String status = subscription.getStatus();
+            Boolean cancelAtPeriodEnd = subscription.getCancelAtPeriodEnd();
+            
+            System.out.println("🔍 Status: " + status);
+            System.out.println("🔍 CancelAtPeriodEnd: " + cancelAtPeriodEnd);
+            
             // Verificar si está cancelada o marcada para cancelar
-            return "canceled".equals(subscription.getStatus()) || 
-                   Boolean.TRUE.equals(subscription.getCancelAtPeriodEnd());
+            boolean isCanceled = "canceled".equals(status) || Boolean.TRUE.equals(cancelAtPeriodEnd);
+            System.out.println("🔍 ¿Está cancelada? " + isCanceled);
+            
+            return isCanceled;
         } catch (StripeException e) {
             System.err.println("❌ Error al verificar estado de cancelación: " + e.getMessage());
             throw e;

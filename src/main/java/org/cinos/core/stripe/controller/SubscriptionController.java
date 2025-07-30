@@ -107,7 +107,12 @@ public class SubscriptionController {
             UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
             UserEntity userEntity = (UserEntity) authentication.getPrincipal();
             
+            System.out.println("🔍 Verificando suscripción para usuario: " + userEntity.getEmail());
+            System.out.println("🔍 StripeSubscriptionId: " + userEntity.getStripeSubscriptionId());
+            System.out.println("🔍 Roles: " + userEntity.getRoles());
+            
             if (userEntity.getStripeSubscriptionId() == null || userEntity.getStripeSubscriptionId().isEmpty()) {
+                System.out.println("❌ Usuario no tiene stripeSubscriptionId");
                 return ResponseEntity.ok(SubscriptionResponse.builder()
                         .message("No tienes una suscripción activa")
                         .success(false)
@@ -116,8 +121,10 @@ public class SubscriptionController {
             
             // Verificar si la suscripción está cancelada
             boolean isCanceled = stripeService.isSubscriptionCanceled(userEntity.getStripeSubscriptionId());
+            System.out.println("🔍 ¿Está cancelada? " + isCanceled);
             
             if (isCanceled) {
+                System.out.println("⚠️ Suscripción cancelada para usuario: " + userEntity.getEmail());
                 return ResponseEntity.ok(SubscriptionResponse.builder()
                         .message("Suscripción cancelada - No se renovará automáticamente")
                         .success(false)
@@ -129,12 +136,15 @@ public class SubscriptionController {
             Long nextRenewal = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
             
             String message = "Estado: " + status + ", Próxima renovación: " + new java.util.Date(nextRenewal * 1000);
+            System.out.println("✅ Suscripción activa para usuario: " + userEntity.getEmail());
             
             return ResponseEntity.ok(SubscriptionResponse.builder()
                     .message(message)
                     .success(true)
                     .build());
         } catch (Exception e) {
+            System.err.println("❌ Error en getSubscriptionDetails: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
         }
@@ -168,6 +178,49 @@ public class SubscriptionController {
             return ResponseEntity.ok(
                     SubscriptionResponse.builder()
                             .message("Suscripción cancelada exitosamente. Tu acceso premium se mantendrá hasta el final del período actual.")
+                            .success(true)
+                            .build());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());
+        }
+    }
+
+    /**
+     * Reactiva una suscripción cancelada
+     */
+    @PostMapping("/reactivate")
+    public ResponseEntity<SubscriptionResponse> reactivateSubscription() {
+        try {
+            // Obtener usuario autenticado
+            UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            UserEntity userEntity = (UserEntity) authentication.getPrincipal();
+            
+            if (userEntity.getStripeSubscriptionId() == null || userEntity.getStripeSubscriptionId().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(SubscriptionResponse.builder()
+                                .message("No tienes una suscripción para reactivar")
+                                .success(false)
+                                .build());
+            }
+
+            // Verificar si la suscripción está cancelada o marcada para cancelar
+            boolean isCanceled = stripeService.isSubscriptionCanceled(userEntity.getStripeSubscriptionId());
+            
+            if (!isCanceled) {
+                return ResponseEntity.badRequest()
+                        .body(SubscriptionResponse.builder()
+                                .message("Tu suscripción no está cancelada")
+                                .success(false)
+                                .build());
+            }
+
+            // Reactivar la suscripción en Stripe
+            stripeService.reactivateSubscription(userEntity.getStripeSubscriptionId());
+            
+            return ResponseEntity.ok(
+                    SubscriptionResponse.builder()
+                            .message("Suscripción reactivada exitosamente. Se cobrará automáticamente al finalizar el período actual.")
                             .success(true)
                             .build());
         } catch (Exception e) {
