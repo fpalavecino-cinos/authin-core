@@ -22,7 +22,7 @@ public class FirebaseConfig {
     @Value("${firebase.project.id}")
     private String projectId;
 
-    @Value("${FIREBASE_CREDENTIALS_BASE64:}")
+    @Value("${firebase.credentials}")
     private String firebaseCredentialsBase64;
 
     private FirebaseApp firebaseApp;
