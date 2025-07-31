@@ -33,4 +33,5 @@ build/
 .vscode/
 
 src/main/resources/authin-446020-4b361fe5ccb4.json
+src\main\resources\cinos-b56a2-firebase-adminsdk-fbsvc-0dbf063910.json
 src/main/resources/data.sql

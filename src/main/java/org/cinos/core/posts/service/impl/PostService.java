@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.cinos.core.users.service.impl.UserService;
+import org.cinos.core.notifications.service.AutomaticNotificationService;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +56,7 @@ public class PostService implements IPostService {
     private final MailService mailService;
     private final TechnicalVerificationRepository technicalVerificationRepository;
     private final UserService userService;
+    private final AutomaticNotificationService automaticNotificationService;
 
     @Override
     public List<PostDTO> getPostPageable(Integer page, Integer size) {
@@ -182,6 +184,15 @@ public class PostService implements IPostService {
         technicalVerificationRepository.save(technicalVerification);
         postImageRepository.saveAll(imagesEntity);
         postLocationRepository.save(location);
+        
+        // Enviar notificación a usuarios premium sobre el nuevo post
+        try {
+            automaticNotificationService.notifyNewPost(postEntity);
+        } catch (Exception e) {
+            // Log del error pero no fallar la creación del post
+            System.err.println("Error enviando notificación de nuevo post: " + e.getMessage());
+        }
+        
         return postMapper.toDTO(postEntity);
     }
 
