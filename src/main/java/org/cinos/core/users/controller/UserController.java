@@ -33,6 +33,9 @@ import org.cinos.core.users.repository.UserRepository;
 import org.cinos.core.posts.entity.PostEntity;
 import org.cinos.core.users.entity.UserEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.cinos.core.users.entity.Role;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/user")
@@ -200,5 +203,51 @@ public class UserController {
             userRepository.save(user);
         }
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Endpoint de prueba para verificar el sistema de notificaciones premium
+     * Solo para testing - no usar en producción
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/test-premium-notifications/{postId}")
+    public ResponseEntity<Map<String, Object>> testPremiumNotifications(@PathVariable Long postId) {
+        try {
+            PostEntity post = postRepository.findById(postId).orElseThrow();
+            
+            // Obtener estadísticas de usuarios premium
+            long totalPremiumUsers = userRepository.countByRolesContaining(Role.PREMIUM);
+            long usersWithPreferences = userRepository.countByPremiumNotificationBrandIsNotNullOrPremiumNotificationModelIsNotNullOrPremiumNotificationConditionIsNotNull();
+            
+            // Obtener usuarios que coinciden con las preferencias del post
+            List<UserEntity> matchingUsers = userRepository.findPremiumUsersMatchingPostPreferences(
+                post.getMake(), 
+                post.getModel(), 
+                post.getIsUsed() ? "usado" : "nuevo"
+            );
+            
+            Map<String, Object> response = Map.of(
+                "postId", postId,
+                "postMake", post.getMake(),
+                "postModel", post.getModel(),
+                "postCondition", post.getIsUsed() ? "usado" : "nuevo",
+                "totalPremiumUsers", totalPremiumUsers,
+                "usersWithPreferences", usersWithPreferences,
+                "matchingUsersCount", matchingUsers.size(),
+                "matchingUsers", matchingUsers.stream()
+                    .map(user -> Map.of(
+                        "id", user.getId(),
+                        "email", user.getEmail(),
+                        "preferredBrand", user.getPremiumNotificationBrand(),
+                        "preferredModel", user.getPremiumNotificationModel(),
+                        "preferredCondition", user.getPremiumNotificationCondition()
+                    ))
+                    .collect(Collectors.toList())
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 }

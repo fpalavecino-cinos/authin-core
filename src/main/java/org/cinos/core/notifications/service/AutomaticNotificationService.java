@@ -7,9 +7,13 @@ import org.cinos.core.notifications.entity.PushTokenEntity;
 import org.cinos.core.notifications.repository.PushTokenRepository;
 import org.cinos.core.posts.entity.PostEntity;
 import org.cinos.core.users.entity.UserEntity;
+import org.cinos.core.users.repository.UserRepository;
+import org.cinos.core.users.model.Role;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,9 +22,11 @@ public class AutomaticNotificationService {
 
     private final PushNotificationService pushNotificationService;
     private final PushTokenRepository pushTokenRepository;
+    private final UserRepository userRepository;
 
     /**
      * Notifica a usuarios premium sobre un nuevo post
+     * Solo envía notificaciones a usuarios que coincidan con sus preferencias
      */
     public void notifyNewPost(PostEntity post) {
         try {
@@ -35,6 +41,92 @@ public class AutomaticNotificationService {
                     "model", post.getModel()
             );
 
+            // Obtener tokens de usuarios premium que coincidan con sus preferencias
+            List<String> matchingTokens = getPremiumTokensMatchingPreferences(post);
+
+            if (matchingTokens.isEmpty()) {
+                log.info("No hay usuarios premium que coincidan con las preferencias para el post: {} {}", 
+                        post.getMake(), post.getModel());
+                return;
+            }
+
+            PushNotificationRequest request = PushNotificationRequest.builder()
+                    .title(title)
+                    .body(body)
+                    .data(data)
+                    .tokens(matchingTokens)
+                    .build();
+
+            pushNotificationService.sendNotificationToUsers(request);
+            log.info("Notificación de nuevo post enviada a {} usuarios premium que coinciden con sus preferencias", 
+                    matchingTokens.size());
+        } catch (Exception e) {
+            log.error("Error enviando notificación de nuevo post: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene los tokens de usuarios premium que coinciden con las preferencias del post
+     */
+    private List<String> getPremiumTokensMatchingPreferences(PostEntity post) {
+        // Obtener todos los usuarios premium con sus tokens activos
+        List<PushTokenEntity> premiumTokens = pushTokenRepository.findActiveTokensForPremiumUsers(Role.PREMIUM);
+        
+        return premiumTokens.stream()
+                .filter(tokenEntity -> {
+                    UserEntity user = tokenEntity.getUser();
+                    
+                    // Si el usuario no tiene preferencias configuradas, no recibir notificaciones
+                    if (user.getPremiumNotificationBrand() == null && 
+                        user.getPremiumNotificationModel() == null && 
+                        user.getPremiumNotificationCondition() == null) {
+                        return false;
+                    }
+                    
+                    // Verificar coincidencia de marca
+                    if (user.getPremiumNotificationBrand() != null && 
+                        !user.getPremiumNotificationBrand().isEmpty() &&
+                        !user.getPremiumNotificationBrand().equals(post.getMake())) {
+                        return false;
+                    }
+                    
+                    // Verificar coincidencia de modelo
+                    if (user.getPremiumNotificationModel() != null && 
+                        !user.getPremiumNotificationModel().isEmpty() &&
+                        !user.getPremiumNotificationModel().equals(post.getModel())) {
+                        return false;
+                    }
+                    
+                    // Verificar coincidencia de condición (usado/nuevo)
+                    if (user.getPremiumNotificationCondition() != null && 
+                        !user.getPremiumNotificationCondition().isEmpty()) {
+                        String postCondition = post.getIsUsed() ? "usado" : "nuevo";
+                        if (!user.getPremiumNotificationCondition().equals(postCondition)) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                })
+                .map(PushTokenEntity::getToken)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Notifica cuando se completa una verificación técnica
+     */
+    public void notifyVerificationCompleted(PostEntity post, String verificationStatus) {
+        try {
+            String title = "✅ Verificación técnica completada";
+            String body = String.format("La verificación técnica del %s %s ha sido %s", 
+                    post.getMake(), post.getModel(), verificationStatus);
+
+            Map<String, String> data = Map.of(
+                    "type", "VERIFICATION_COMPLETED",
+                    "postId", post.getId().toString(),
+                    "verificationStatus", verificationStatus
+            );
+
             PushNotificationRequest request = PushNotificationRequest.builder()
                     .title(title)
                     .body(body)
@@ -43,37 +135,9 @@ public class AutomaticNotificationService {
                     .build();
 
             pushNotificationService.sendNotificationToUsers(request);
-            log.info("Notificación de nuevo post enviada a usuarios premium");
+            log.info("Notificación de verificación técnica enviada a usuarios premium");
         } catch (Exception e) {
-            log.error("Error enviando notificación de nuevo post: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * Notifica cuando se completa una verificación técnica
-     */
-    public void notifyVerificationCompleted(UserEntity user, String make, String model) {
-        try {
-            String title = "✅ Verificación técnica completada";
-            String body = String.format("La verificación técnica del %s %s ha sido completada", make, model);
-
-            Map<String, String> data = Map.of(
-                    "type", "VERIFICATION_COMPLETED",
-                    "make", make,
-                    "model", model
-            );
-
-            PushNotificationRequest request = PushNotificationRequest.builder()
-                    .title(title)
-                    .body(body)
-                    .data(data)
-                    .userIds(java.util.List.of(user.getId()))
-                    .build();
-
-            pushNotificationService.sendNotificationToUsers(request);
-            log.info("Notificación de verificación completada enviada al usuario: {}", user.getEmail());
-        } catch (Exception e) {
-            log.error("Error enviando notificación de verificación: {}", e.getMessage());
+            log.error("Error enviando notificación de verificación técnica: {}", e.getMessage());
         }
     }
 
@@ -182,5 +246,14 @@ public class AutomaticNotificationService {
         } catch (Exception e) {
             log.error("Error enviando oferta premium: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Método de prueba para verificar el filtrado de preferencias
+     * Solo para testing - no usar en producción
+     */
+    public int getMatchingPremiumUsersCount(PostEntity post) {
+        List<String> matchingTokens = getPremiumTokensMatchingPreferences(post);
+        return matchingTokens.size();
     }
 } 
