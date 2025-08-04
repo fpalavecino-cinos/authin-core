@@ -114,7 +114,7 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
                 </ul>
                 """.formatted(post.getMake(), post.getModel(), verificationAppointment.toString(), post.getUserAccount().getUser().getName(), post.getUserAccount().getUser().getLastname(), post.getUserAccount().getUser().getEmail(), post.getUserAccount().getUser().getPhone(), post.getLocation().getAddress());
         SendEmailRequest sendEmailRequestToTechnician = SendEmailRequest.builder()
-                .to(new String[]{post.getUserAccount().getUser().getEmail()})
+                .to(new String[]{"fpalavecino@cinos.org"})
                 .subject("Verificación técnica aceptada")
                 .message(messageToTechnician)
                 .build();

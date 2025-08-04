@@ -33,6 +33,9 @@ import org.cinos.core.users.repository.UserRepository;
 import org.cinos.core.posts.entity.PostEntity;
 import org.cinos.core.users.entity.UserEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor

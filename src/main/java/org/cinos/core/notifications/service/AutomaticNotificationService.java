@@ -30,6 +30,9 @@ public class AutomaticNotificationService {
      */
     public void notifyNewPost(PostEntity post) {
         try {
+            log.info("Iniciando notificación de nuevo post: {} {} (ID: {})", 
+                    post.getMake(), post.getModel(), post.getId());
+            
             String title = "🚗 Nuevo vehículo disponible";
             String body = String.format("Se ha publicado un nuevo %s %s", 
                     post.getMake(), post.getModel());
@@ -45,10 +48,13 @@ public class AutomaticNotificationService {
             List<String> matchingTokens = getPremiumTokensMatchingPreferences(post);
 
             if (matchingTokens.isEmpty()) {
-                log.info("No hay usuarios premium que coincidan con las preferencias para el post: {} {}", 
-                        post.getMake(), post.getModel());
+                log.info("No hay usuarios premium que coincidan con las preferencias para el post: {} {} (ID: {})", 
+                        post.getMake(), post.getModel(), post.getId());
                 return;
             }
+
+            log.info("Enviando notificación a {} usuarios premium para post {} {} (ID: {})", 
+                    matchingTokens.size(), post.getMake(), post.getModel(), post.getId());
 
             PushNotificationRequest request = PushNotificationRequest.builder()
                     .title(title)
@@ -57,11 +63,16 @@ public class AutomaticNotificationService {
                     .tokens(matchingTokens)
                     .build();
 
-            pushNotificationService.sendNotificationToUsers(request);
-            log.info("Notificación de nuevo post enviada a {} usuarios premium que coinciden con sus preferencias", 
-                    matchingTokens.size());
+            var response = pushNotificationService.sendNotificationToUsers(request);
+            
+            if (response.isSuccess()) {
+                log.info("✅ Notificación de nuevo post enviada exitosamente a {} usuarios premium", 
+                        response.getSuccessfulDeliveries());
+            } else {
+                log.error("❌ Error enviando notificación de nuevo post: {}", response.getMessage());
+            }
         } catch (Exception e) {
-            log.error("Error enviando notificación de nuevo post: {}", e.getMessage());
+            log.error("❌ Error crítico enviando notificación de nuevo post: {}", e.getMessage(), e);
         }
     }
 
@@ -76,10 +87,17 @@ public class AutomaticNotificationService {
                 .filter(tokenEntity -> {
                     UserEntity user = tokenEntity.getUser();
                     
+                    // Verificar que el usuario sea realmente premium
+                    if (user.getRoles() == null || !user.getRoles().contains(Role.PREMIUM)) {
+                        log.debug("Usuario {} no es premium, saltando notificación", user.getEmail());
+                        return false;
+                    }
+                    
                     // Si el usuario no tiene preferencias configuradas, no recibir notificaciones
                     if (user.getPremiumNotificationBrand() == null && 
                         user.getPremiumNotificationModel() == null && 
                         user.getPremiumNotificationCondition() == null) {
+                        log.debug("Usuario premium {} no tiene preferencias configuradas, saltando notificación", user.getEmail());
                         return false;
                     }
                     
@@ -87,6 +105,8 @@ public class AutomaticNotificationService {
                     if (user.getPremiumNotificationBrand() != null && 
                         !user.getPremiumNotificationBrand().isEmpty() &&
                         !user.getPremiumNotificationBrand().equals(post.getMake())) {
+                        log.debug("Usuario {} no coincide con marca preferida: {} vs {}", 
+                                user.getEmail(), user.getPremiumNotificationBrand(), post.getMake());
                         return false;
                     }
                     
@@ -94,6 +114,8 @@ public class AutomaticNotificationService {
                     if (user.getPremiumNotificationModel() != null && 
                         !user.getPremiumNotificationModel().isEmpty() &&
                         !user.getPremiumNotificationModel().equals(post.getModel())) {
+                        log.debug("Usuario {} no coincide con modelo preferido: {} vs {}", 
+                                user.getEmail(), user.getPremiumNotificationModel(), post.getModel());
                         return false;
                     }
                     
@@ -102,10 +124,14 @@ public class AutomaticNotificationService {
                         !user.getPremiumNotificationCondition().isEmpty()) {
                         String postCondition = post.getIsUsed() ? "usado" : "nuevo";
                         if (!user.getPremiumNotificationCondition().equals(postCondition)) {
+                            log.debug("Usuario {} no coincide con condición preferida: {} vs {}", 
+                                    user.getEmail(), user.getPremiumNotificationCondition(), postCondition);
                             return false;
                         }
                     }
                     
+                    log.debug("Usuario premium {} coincide con preferencias para post {} {}", 
+                            user.getEmail(), post.getMake(), post.getModel());
                     return true;
                 })
                 .map(PushTokenEntity::getToken)

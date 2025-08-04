@@ -46,4 +46,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
         @Param("model") String model,
         @Param("condition") String condition
     );
+
+    /**
+     * Encuentra todos los usuarios premium
+     */
+    @Query("SELECT u FROM UserEntity u WHERE :role MEMBER OF u.roles")
+    List<UserEntity> findByRolesContaining(@Param("role") Role role);
 }

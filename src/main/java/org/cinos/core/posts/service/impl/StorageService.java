@@ -31,20 +31,32 @@ public class StorageService {
             String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
             Bucket bucket = storage.get(bucketName);
             Blob blob = bucket.create(fileName, file.getBytes());
-            fileUrls.add(blob.getMediaLink());  // URL pública del archivo
+            // Generar URL pública en lugar de URL que requiere autenticación
+            String publicUrl = generatePublicUrl(fileName);
+            fileUrls.add(publicUrl);
         }
         return fileUrls;
     }
 
     public String uploadFile(MultipartFile file) throws IOException {
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Bucket bucket = storage.get(bucketName);
-            Blob blob = bucket.create(fileName, file.getBytes());
-        return blob.getMediaLink();
+        String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        Bucket bucket = storage.get(bucketName);
+        Blob blob = bucket.create(fileName, file.getBytes());
+        // Generar URL pública en lugar de URL que requiere autenticación
+        return generatePublicUrl(fileName);
     }
 
     public byte[] downloadFile(String fileName) throws IOException {
         Blob blob = storage.get(bucketName, fileName);
         return blob.getContent();
+    }
+
+    /**
+     * Genera una URL pública para el archivo en Google Cloud Storage
+     * @param fileName nombre del archivo
+     * @return URL pública del archivo
+     */
+    private String generatePublicUrl(String fileName) {
+        return String.format("https://storage.googleapis.com/%s/%s", bucketName, fileName);
     }
 }
