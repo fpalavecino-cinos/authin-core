@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -200,7 +201,8 @@ public class PostController {
             
             // Verificar que la imagen no esté vacía
             if (imageBytes == null || imageBytes.length == 0) {
-                return ResponseEntity.notFound().body("Imagen no encontrada o vacía".getBytes());
+                return new ResponseEntity<>("Imagen no encontrada o vacía".getBytes(),
+                       HttpStatus.NOT_FOUND);
             }
 
             log.info("Imagen descargada exitosamente, tamaño: {} bytes", imageBytes.length);
