@@ -6,6 +6,7 @@ import org.cinos.core.posts.service.ICommentService;
 import org.cinos.core.posts.service.IMakeService;
 import org.cinos.core.posts.service.IModelService;
 import org.cinos.core.posts.service.IPostService;
+import org.cinos.core.posts.service.impl.StorageService;
 import org.cinos.core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.core.users.utils.exceptions.UserNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,7 @@ public class PostController {
     private final IMakeService makeService;
     private final IModelService modelService;
     private final ICommentService commentService;
+    private final StorageService storageService;
 
     @GetMapping("/pageable")
     public ResponseEntity<List<PostDTO>> getPostPageable(@RequestParam final Integer page, @RequestParam final Integer size) {
@@ -182,5 +184,40 @@ public class PostController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/download-image")
+    public ResponseEntity<byte[]> downloadImage(@RequestBody final DownloadImageRequest request) {
+        try {
+            log.info("Descargando imagen desde URL: {}", request.getImageUrl());
+            
+            // Validar que la URL no esté vacía
+            if (request.getImageUrl() == null || request.getImageUrl().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("URL de imagen no puede estar vacía".getBytes());
+            }
+
+            // Descargar la imagen usando el StorageService
+            byte[] imageBytes = storageService.downloadImageFromUrl(request.getImageUrl());
+            
+            // Verificar que la imagen no esté vacía
+            if (imageBytes == null || imageBytes.length == 0) {
+                return ResponseEntity.notFound().body("Imagen no encontrada o vacía".getBytes());
+            }
+
+            log.info("Imagen descargada exitosamente, tamaño: {} bytes", imageBytes.length);
+            
+            // Devolver la imagen como blob con headers apropiados
+            return ResponseEntity.ok()
+                    .header("Content-Type", "image/jpeg")
+                    .header("Content-Disposition", "attachment; filename=image.jpg")
+                    .body(imageBytes);
+                    
+        } catch (IOException e) {
+            log.error("Error al descargar la imagen: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(("Error al descargar la imagen: " + e.getMessage()).getBytes());
+        } catch (Exception e) {
+            log.error("Error inesperado al descargar la imagen: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(("Error inesperado al descargar la imagen: " + e.getMessage()).getBytes());
+        }
+    }
 
 }
