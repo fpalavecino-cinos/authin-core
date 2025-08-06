@@ -36,7 +36,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
 import org.cinos.core.users.service.impl.UserService;
 import org.cinos.core.notifications.service.AutomaticNotificationService;
 
@@ -58,6 +61,7 @@ public class PostService implements IPostService {
     private final TechnicalVerificationRepository technicalVerificationRepository;
     private final UserService userService;
     private final AutomaticNotificationService automaticNotificationService;
+    private final ImageProcessingService imageProcessingService;
 
     @Override
     public List<PostDTO> getPostPageable(Integer page, Integer size) {
@@ -166,11 +170,29 @@ public class PostService implements IPostService {
                 .post(postEntity)
                 .status(VerificationStatus.NOT_STARTED)
                 .build();
-        List<String> imageUrls = storageService.uploadFiles(images);
-        List<PostImageEntity> imagesEntity = imageUrls.stream().map(url -> PostImageEntity.builder()
-                .url(url)
-                .post(postEntity)
-                .build()).toList();
+        
+        // Procesar imágenes con múltiples resoluciones
+        List<PostImageEntity> imagesEntity = new ArrayList<>();
+        for (MultipartFile image : images) {
+            try {
+                // Procesar imagen con múltiples resoluciones
+                Map<String, String> imageResolutions = imageProcessingService.processImageWithMultipleResolutions(image);
+                
+                // Guardar la URL original como principal
+                String originalUrl = imageResolutions.get("original");
+                PostImageEntity imageEntity = PostImageEntity.builder()
+                        .url(originalUrl)
+                        .post(postEntity)
+                        .build();
+                imagesEntity.add(imageEntity);
+                
+                // Aquí podrías guardar las otras resoluciones si necesitas acceder a ellas
+                // Por ahora solo guardamos la original
+                
+            } catch (Exception e) {
+                throw new RuntimeException("Error procesando imagen: " + image.getOriginalFilename() + " - " + e.getMessage());
+            }
+        }
 
         PostLocationEntity location = PostLocationEntity.builder()
                 .address(request.location().address())

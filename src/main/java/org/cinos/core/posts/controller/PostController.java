@@ -27,6 +27,14 @@ import java.io.InputStream;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.cinos.core.posts.service.impl.ImageProcessingService;
+import org.cinos.core.posts.dto.ImageProcessingResponse;
+import org.cinos.core.posts.dto.ImageInfoResponse;
+import org.cinos.core.posts.service.impl.ImageProcessingService.ImageInfo;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/post")
@@ -38,6 +46,7 @@ public class PostController {
     private final IMakeService makeService;
     private final IModelService modelService;
     private final ICommentService commentService;
+    private final ImageProcessingService imageProcessingService;
 
     @GetMapping("/pageable")
     public ResponseEntity<List<PostDTO>> getPostPageable(@RequestParam final Integer page, @RequestParam final Integer size) {
@@ -236,6 +245,77 @@ public class PostController {
 
         } catch (Exception e) {
             log.error("Error al descargar la imagen: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/process-image")
+    public ResponseEntity<ImageProcessingResponse> processImage(@RequestParam("image") MultipartFile image) {
+        try {
+            // Validar que el archivo sea una imagen
+            if (image == null || image.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            String contentType = image.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Procesar la imagen con múltiples resoluciones
+            Map<String, String> imageResolutions = imageProcessingService.processImageWithMultipleResolutions(image);
+            
+            // Obtener información de la imagen
+            ImageProcessingService.ImageInfo imageInfo = imageProcessingService.getImageInfo(image);
+            
+            ImageProcessingResponse response = ImageProcessingResponse.builder()
+                    .originalUrl(imageResolutions.get("original"))
+                    .mediumUrl(imageResolutions.get("medium"))
+                    .thumbnailUrl(imageResolutions.get("thumbnail"))
+                    .smallUrl(imageResolutions.get("small"))
+                    .width(imageInfo.getWidth())
+                    .height(imageInfo.getHeight())
+                    .size(imageInfo.getSize())
+                    .format(imageInfo.getFormat())
+                    .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error procesando imagen: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/image-info")
+    public ResponseEntity<ImageInfoResponse> getImageInfo(@RequestParam String imageUrl) {
+        try {
+            // Validar URL
+            if (imageUrl == null || imageUrl.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Descargar y analizar la imagen
+            URL url = new URL(imageUrl);
+            try (InputStream inputStream = url.openStream()) {
+                BufferedImage image = ImageIO.read(inputStream);
+                if (image == null) {
+                    return ResponseEntity.badRequest().build();
+                }
+
+                ImageInfoResponse response = ImageInfoResponse.builder()
+                        .width(image.getWidth())
+                        .height(image.getHeight())
+                        .url(imageUrl)
+                        .build();
+
+                return ResponseEntity.ok(response);
+            }
+
+        } catch (Exception e) {
+            log.error("Error obteniendo información de imagen: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
