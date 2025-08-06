@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,7 +40,7 @@ public class CommentService implements ICommentService {
                                 .postId(commentEntity.getPostId())
                                 .userId(commentEntity.getUserId())
                                 .content(commentEntity.getContent())
-                                .commentDate(commentEntity.getCommentDate())
+                                .commentDate(commentEntity.getCommentDate().atZone(ZoneId.systemDefault()))
                                 .accountAvatar(accountService.getUserAccount(commentEntity.getUserId()).avatarImg())
                                 .userName(accountService.getUserAccount(commentEntity.getUserId()).name())
                                 .build();
@@ -81,7 +82,7 @@ public class CommentService implements ICommentService {
                 .postId(commentEntity.getPostId())
                 .userId(commentEntity.getUserId())
                 .content(commentEntity.getContent())
-                .commentDate(commentEntity.getCommentDate())
+                .commentDate(commentEntity.getCommentDate().atZone(ZoneId.systemDefault()))
                 .build();
     }
     

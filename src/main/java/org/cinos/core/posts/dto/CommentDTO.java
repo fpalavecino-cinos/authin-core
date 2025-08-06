@@ -2,7 +2,7 @@ package org.cinos.core.posts.dto;
 
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Builder
-public record CommentDTO(Long id, Long postId, Long userId, String content, LocalDateTime commentDate, String accountAvatar, String userName) { }
+public record CommentDTO(Long id, Long postId, Long userId, String content, ZonedDateTime commentDate, String accountAvatar, String userName) { }
