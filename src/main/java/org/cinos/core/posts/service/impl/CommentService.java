@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,11 @@ public class CommentService implements ICommentService {
 
     private final CommentRepository commentRepository;
     private final AccountService accountService;
+    
+    // Cache para control de rate limiting por usuario
+    private final ConcurrentHashMap<Long, LocalDateTime> userLastCommentTime = new ConcurrentHashMap<>();
+    private static final int MIN_COMMENT_INTERVAL_SECONDS = 3; // 3 segundos entre comentarios
+    private static final int MAX_COMMENT_LENGTH = 500; // Máximo 500 caracteres
 
     @Override
     public Page<CommentDTO> getCommentsByPostId(Long postId, Pageable page) {
@@ -53,10 +59,19 @@ public class CommentService implements ICommentService {
 
     @Override
     public CommentDTO createComment(CommentDTO commentDTO) {
+        // Validar contenido del comentario
+        validateCommentContent(commentDTO.content());
+        
+        // Validar rate limiting
+        validateRateLimit(commentDTO.userId());
+        
+        // Actualizar tiempo del último comentario
+        userLastCommentTime.put(commentDTO.userId(), LocalDateTime.now());
+        
         CommentEntity commentEntity = CommentEntity.builder()
                 .postId(commentDTO.postId())
                 .userId(commentDTO.userId())
-                .content(commentDTO.content())
+                .content(commentDTO.content().trim())
                 .commentDate(LocalDateTime.now())
                 .build();
 
@@ -68,5 +83,38 @@ public class CommentService implements ICommentService {
                 .content(commentEntity.getContent())
                 .commentDate(commentEntity.getCommentDate())
                 .build();
+    }
+    
+    /**
+     * Valida el contenido del comentario
+     */
+    private void validateCommentContent(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            throw new IllegalArgumentException("El comentario no puede estar vacío");
+        }
+        
+        if (content.length() > MAX_COMMENT_LENGTH) {
+            throw new IllegalArgumentException("El comentario no puede exceder " + MAX_COMMENT_LENGTH + " caracteres");
+        }
+        
+        // Verificar que no sea solo espacios en blanco
+        if (content.trim().length() == 0) {
+            throw new IllegalArgumentException("El comentario no puede estar vacío");
+        }
+    }
+    
+    /**
+     * Valida el rate limiting para evitar spam
+     */
+    private void validateRateLimit(Long userId) {
+        LocalDateTime lastCommentTime = userLastCommentTime.get(userId);
+        if (lastCommentTime != null) {
+            LocalDateTime now = LocalDateTime.now();
+            long secondsSinceLastComment = java.time.Duration.between(lastCommentTime, now).getSeconds();
+            
+            if (secondsSinceLastComment < MIN_COMMENT_INTERVAL_SECONDS) {
+                throw new IllegalStateException("Debes esperar " + MIN_COMMENT_INTERVAL_SECONDS + " segundos entre comentarios");
+            }
+        }
     }
 }
