@@ -3,7 +3,7 @@ package org.cinos.core.posts.dto;
 import org.cinos.core.posts.models.CurrencySymbol;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Builder
@@ -17,7 +17,7 @@ public record PostFeedDTO(
         Boolean isUsed,
         String userFullName,
         Long userId,
-        LocalDateTime publicationDate,
+        ZonedDateTime publicationDate,
         PostLocationDTO location,
         String kilometers,
         List<String> imagesUrls,

@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import org.cinos.core.users.service.impl.UserService;
 import org.cinos.core.notifications.service.AutomaticNotificationService;
@@ -107,7 +108,7 @@ public class PostService implements IPostService {
                     .make(e.getMake())
                     .isUsed(e.getIsUsed())
                     .userFullName(userFullName)
-                    .publicationDate(e.getPublicationDate())
+                    .publicationDate(e.getPublicationDate().atZone(ZoneId.systemDefault()))
                     .imagesUrls(e.getImages().stream().map(PostImageEntity::getUrl).toList())
                     .currencySymbol(e.getCurrencySymbol())
                     .location(postMapper.toLocationDTO(e.getLocation()))

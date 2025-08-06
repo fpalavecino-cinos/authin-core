@@ -2,7 +2,7 @@ package org.cinos.core.posts.dto;
 import lombok.Builder;
 import org.cinos.core.technical_verification.dto.TechnicalVerificationDTO;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Builder
@@ -14,7 +14,7 @@ public record PostDTO(
         Double price,
         Boolean isUsed,
         Long userId,
-        LocalDateTime publicationDate,
+        ZonedDateTime publicationDate,
         String userFullName,
         Boolean active,
         String currencySymbol,

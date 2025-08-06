@@ -7,6 +7,7 @@ import org.cinos.core.users.entity.AccountEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,7 @@ public interface PostMapper {
     @Mapping(source = "hp", target = "hp")
     @Mapping(source = "traccion", target = "traccion")
     @Mapping(source = "motor", target = "motor")
+    @Mapping(source = "publicationDate", target = "publicationDate", qualifiedByName = "mapPublicationDate")
     PostDTO toDTO(PostEntity post);
     PostLocationDTO toLocationDTO(PostLocationEntity location);
 
@@ -86,6 +88,14 @@ public interface PostMapper {
     @Named("mapCarMake")
     default String mapCarMake(MakeEntity make) {
         return make.getName();
+    }
+
+    @Named("mapPublicationDate")
+    default java.time.ZonedDateTime mapPublicationDate(java.time.LocalDateTime publicationDate) {
+        if (publicationDate == null) {
+            return null;
+        }
+        return publicationDate.atZone(ZoneId.systemDefault());
     }
 
 }
