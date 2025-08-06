@@ -6,7 +6,6 @@ import org.cinos.core.posts.service.ICommentService;
 import org.cinos.core.posts.service.IMakeService;
 import org.cinos.core.posts.service.IModelService;
 import org.cinos.core.posts.service.IPostService;
-import org.cinos.core.posts.service.impl.StorageService;
 import org.cinos.core.posts.utils.exceptions.PostNotFoundException;
 import org.cinos.core.users.utils.exceptions.UserNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +22,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.net.URL;
+import java.io.InputStream;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/post")
@@ -35,7 +38,6 @@ public class PostController {
     private final IMakeService makeService;
     private final IModelService modelService;
     private final ICommentService commentService;
-    private final StorageService storageService;
 
     @GetMapping("/pageable")
     public ResponseEntity<List<PostDTO>> getPostPageable(@RequestParam final Integer page, @RequestParam final Integer size) {
@@ -187,38 +189,54 @@ public class PostController {
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @PostMapping("/download-image")
-    public ResponseEntity<byte[]> downloadImage(@RequestBody final DownloadImageRequest request) {
+    public ResponseEntity<InputStreamResource> downloadImage(@RequestBody DownloadImageRequest request) {
         try {
-            log.info("Descargando imagen desde URL: {}", request.getImageUrl());
-            
             // Validar que la URL no esté vacía
             if (request.getImageUrl() == null || request.getImageUrl().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("URL de imagen no puede estar vacía".getBytes());
+                return ResponseEntity.badRequest().build();
             }
 
-            // Descargar la imagen usando el StorageService
-            byte[] imageBytes = storageService.downloadImageFromUrl(request.getImageUrl());
-            
-            // Verificar que la imagen no esté vacía
-            if (imageBytes == null || imageBytes.length == 0) {
-                return new ResponseEntity<>("Imagen no encontrada o vacía".getBytes(),
-                       HttpStatus.NOT_FOUND);
+            // Validar que la URL sea válida
+            String imageUrl = request.getImageUrl().trim();
+            if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                return ResponseEntity.badRequest().build();
             }
 
-            log.info("Imagen descargada exitosamente, tamaño: {} bytes", imageBytes.length);
+            // Crear URL y obtener el stream de la imagen
+            URL url = new URL(imageUrl);
+            InputStream inputStream = url.openStream();
+
+            // Determinar el tipo de archivo basado en la URL
+            String fileName = "imagen.jpg";
+            String contentType = MediaType.IMAGE_JPEG_VALUE;
             
-            // Devolver la imagen como blob con headers apropiados
+            if (imageUrl.toLowerCase().endsWith(".png")) {
+                fileName = "imagen.png";
+                contentType = MediaType.IMAGE_PNG_VALUE;
+            } else if (imageUrl.toLowerCase().endsWith(".gif")) {
+                fileName = "imagen.gif";
+                contentType = MediaType.IMAGE_GIF_VALUE;
+            } else if (imageUrl.toLowerCase().endsWith(".webp")) {
+                fileName = "imagen.webp";
+                contentType = "image/webp";
+            }
+
+            // Crear headers para la descarga
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            headers.setContentDispositionFormData("attachment", fileName);
+            headers.set("Cache-Control", "no-cache");
+
+            // Crear el recurso de entrada
+            InputStreamResource resource = new InputStreamResource(inputStream);
+
             return ResponseEntity.ok()
-                    .header("Content-Type", "image/jpeg")
-                    .header("Content-Disposition", "attachment; filename=image.jpg")
-                    .body(imageBytes);
-                    
-        } catch (IOException e) {
-            log.error("Error al descargar la imagen: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(("Error al descargar la imagen: " + e.getMessage()).getBytes());
+                    .headers(headers)
+                    .body(resource);
+
         } catch (Exception e) {
-            log.error("Error inesperado al descargar la imagen: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(("Error inesperado al descargar la imagen: " + e.getMessage()).getBytes());
+            log.error("Error al descargar la imagen: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
