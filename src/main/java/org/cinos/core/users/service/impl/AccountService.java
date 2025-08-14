@@ -56,6 +56,8 @@ public class AccountService implements IAccountService {
                 .roles(entity.getUser().getRoles().stream()
                         .map(Enum::name)
                         .toList())
+                .phone(entity.getPhone())
+                .attentionHours(entity.getAttentionHours())
                 .build();
     }
 
@@ -90,6 +92,8 @@ public class AccountService implements IAccountService {
                 .avatarImg(accountEntity.getAvatarImg())
                 .roles(accountEntity.getUser().getRoles().stream().map(role -> role.name()).toList())
                 .hasSeenRecommendationsModal( accountEntity.getUser().getHasSeenRecommendationsModal())
+                .phone(accountEntity.getPhone())
+                .attentionHours(accountEntity.getAttentionHours())
                 .build();
     }
 

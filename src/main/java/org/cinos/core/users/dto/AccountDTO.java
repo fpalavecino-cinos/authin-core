@@ -16,6 +16,8 @@ public record AccountDTO(
         Long followings,
         String avatarImg,
         List<String> roles,
-        Boolean hasSeenRecommendationsModal
+        Boolean hasSeenRecommendationsModal,
+        String phone,
+        String attentionHours
         ) {
 }
