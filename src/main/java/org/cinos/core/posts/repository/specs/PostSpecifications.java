@@ -176,7 +176,7 @@ public class PostSpecifications {
             }
 
             if (filter.maxYear() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), filter.maxYear()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("year"), filter.maxYear()));
             }
 
             if (filter.fuelType() != null) {
@@ -204,8 +204,24 @@ public class PostSpecifications {
                 predicates.add(cb.lessThanOrEqualTo(root.get("kilometers"), filter.maxMileage()));
             }
 
-            if (Boolean.TRUE.equals(filter.isUsed())) {
-                predicates.add(cb.isTrue(root.get("isUsed")));
+            if (filter.isUsed() != null) {
+                predicates.add(cb.equal(root.get("isUsed"), filter.isUsed()));
+            }
+
+            if (filter.search() != null && !filter.search().isEmpty()) {
+                String[] terms = filter.search().toLowerCase().trim().split("\\s+");
+
+                for (String term : terms) {
+                    String pattern = "%" + term + "%";
+                    predicates.add(
+                            cb.or(
+                                    cb.like(cb.lower(root.get("make")), pattern),
+                                    cb.like(cb.lower(root.get("model")), pattern),
+                                    cb.like(cb.lower(root.get("motor")), pattern),
+                                    cb.like(cb.lower(root.get("traccion")), pattern)
+                            )
+                    );
+                }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

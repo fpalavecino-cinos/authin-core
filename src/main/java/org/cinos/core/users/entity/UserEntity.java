@@ -75,7 +75,10 @@ public class UserEntity implements UserDetails {
     private String premiumNotificationCondition;
 
     @Column(name = "technical_verification_credits")
-    private Integer technicalVerificationCredits = 1;
+    private Integer technicalVerificationCredits = 0;
+
+    @Column(name = "technical_verification_reports_credits")
+    private Integer technicalVerificationReportsCredits = 0;
 
     @ManyToMany
     @JoinTable(

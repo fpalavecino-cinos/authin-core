@@ -637,6 +637,7 @@ public class SubscriptionController {
                             user.getRoles().add(Role.PREMIUM);
                         }
                         user.setTechnicalVerificationCredits(1); // Resetear créditos
+                        user.setTechnicalVerificationReportsCredits(3);
                         userRepository.save(user);
                         System.out.println("🚀 Usuario actualizado a PREMIUM y créditos reseteados: " + user.getEmail());
                     } else {

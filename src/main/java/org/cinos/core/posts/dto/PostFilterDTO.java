@@ -5,6 +5,7 @@ import java.util.List;
 public record PostFilterDTO(
         List<String> make,
         List<String> model,
+        String search,
         String minYear,
         String maxYear,
         String fuelType,

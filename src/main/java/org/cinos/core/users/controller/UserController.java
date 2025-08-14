@@ -6,6 +6,7 @@ import org.cinos.core.users.controller.request.PremiumNotificationPreferencesReq
 import org.cinos.core.users.controller.request.UserCreateRequest;
 import org.cinos.core.users.controller.request.RecommendationsPreferencesRequest;
 import org.cinos.core.users.dto.*;
+import org.cinos.core.users.entity.AccountEntity;
 import org.cinos.core.users.service.IAccountService;
 import org.cinos.core.users.service.IUserService;
 import org.cinos.core.users.utils.exceptions.DuplicateUserException;
@@ -131,37 +132,25 @@ public class UserController {
     public ResponseEntity<PremiumStatsResponse> getPremiumStats() throws StripeException, UserNotFoundException {
         // Obtener usuario logueado
         var authentication = (org.springframework.security.authentication.UsernamePasswordAuthenticationToken) org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        var userEntity = (org.cinos.core.users.entity.UserEntity) authentication.getPrincipal();
-        // Obtener cuenta
-        var account = accountService.getAccountEntityById(userEntity.getId());
-        // Calcular fechas de inicio y fin de ciclo premium
+        UserEntity userEntity = (org.cinos.core.users.entity.UserEntity) authentication.getPrincipal();
+
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime startOfPeriod;
         java.time.LocalDateTime endOfPeriod;
         java.time.LocalDateTime nextResetDate;
         if (userEntity.getStripeSubscriptionId() != null) {
             Long renewalEpoch = stripeService.getSubscriptionNextRenewal(userEntity.getStripeSubscriptionId());
             nextResetDate = java.time.LocalDateTime.ofEpochSecond(renewalEpoch, 0, java.time.ZoneOffset.UTC);
-            // El periodo actual es desde la última renovación hasta la próxima
-            endOfPeriod = nextResetDate;
-            startOfPeriod = endOfPeriod.minusMonths(1); // Asumiendo ciclo mensual
         } else {
             // Fallback: ciclo mensual calendario
-            startOfPeriod = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
             endOfPeriod = now.plusMonths(1).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
             nextResetDate = endOfPeriod;
         }
-        // Usar el campo real de créditos
-        int verificationReportsRemaining = userEntity.getTechnicalVerificationCredits() != null ? userEntity.getTechnicalVerificationCredits() : 0;
-        int maxVerifications = 1;
-        long verificationsUsed = maxVerifications - verificationReportsRemaining;
-        int verificationsRemaining = verificationReportsRemaining;
-        return ResponseEntity.ok(new PremiumStatsResponse(
-            verificationsRemaining,
-            verificationReportsRemaining,
-            (int)verificationsUsed,
-            nextResetDate
-        ));
+
+        return ResponseEntity.ok(PremiumStatsResponse.builder()
+                .verificationsRemaining(userEntity.getTechnicalVerificationCredits())
+                .verificationReportsRemaining(userEntity.getTechnicalVerificationReportsCredits())
+                .nextResetDate(nextResetDate)
+                .build());
     }
 
     @PostMapping("/send-verification-code/{email}")

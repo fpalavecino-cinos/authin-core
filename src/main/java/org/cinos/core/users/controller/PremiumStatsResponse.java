@@ -1,10 +1,12 @@
 package org.cinos.core.users.controller;
 
+import lombok.Builder;
+
 import java.time.LocalDateTime;
 
+@Builder
 public record PremiumStatsResponse(
-    int verificationsRemaining,
-    int verificationReportsRemaining,
-    int verificationsUsed,
+    Integer verificationsRemaining,
+    Integer verificationReportsRemaining,
     LocalDateTime nextResetDate
 ) {} 

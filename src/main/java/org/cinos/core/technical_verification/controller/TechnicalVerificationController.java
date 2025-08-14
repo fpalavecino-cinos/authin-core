@@ -57,4 +57,5 @@ public class TechnicalVerificationController {
     public ResponseEntity<VerificationStatusResponse> getStatusByPostId(@PathVariable final Long postId) throws PostNotFoundException {
         return ResponseEntity.ok(technicalVerificationService.getStatusByPostId(postId));
     }
+
 }

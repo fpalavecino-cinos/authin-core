@@ -291,7 +291,33 @@ public class PostService implements IPostService {
 
     @Override
     public Page<PostDTO> getPostsFilter(PostFilterDTO postFilterDTO) {
+        // Debug: Log del filtro recibido
+        System.out.println("=== FILTRO RECIBIDO ===");
+        System.out.println("Make: " + postFilterDTO.make());
+        System.out.println("Model: " + postFilterDTO.model());
+        System.out.println("Fuel: " + postFilterDTO.fuelType());
+        System.out.println("Transmission: " + postFilterDTO.transmission());
+        System.out.println("Min Year: " + postFilterDTO.minYear());
+        System.out.println("Max Year: " + postFilterDTO.maxYear());
+        System.out.println("Min Price: " + postFilterDTO.minPrice());
+        System.out.println("Max Price: " + postFilterDTO.maxPrice());
+        System.out.println("Min Mileage: " + postFilterDTO.minMileage());
+        System.out.println("Max Mileage: " + postFilterDTO.maxMileage());
+        System.out.println("Is Used: " + postFilterDTO.isUsed());
+        System.out.println("Search: " + postFilterDTO.search());
+        System.out.println("Page: " + postFilterDTO.page());
+        System.out.println("Size: " + postFilterDTO.size());
+        System.out.println("=======================");
+        
         Page<PostEntity> postPage = postRepository.findAll(PostSpecifications.postFilterSpec(postFilterDTO), PageRequest.of(postFilterDTO.page(), postFilterDTO.size()));
+        
+        // Debug: Log de resultados
+        System.out.println("=== RESULTADOS ===");
+        System.out.println("Total elementos: " + postPage.getTotalElements());
+        System.out.println("Total páginas: " + postPage.getTotalPages());
+        System.out.println("Elementos en esta página: " + postPage.getContent().size());
+        System.out.println("==================");
+        
         return postPage.map(postMapper::toDTO);
     }
 
