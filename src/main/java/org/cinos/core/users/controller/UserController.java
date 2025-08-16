@@ -187,7 +187,7 @@ public class UserController {
         }
         if (!user.getUnlockedTechnicalVerifications().contains(post)) {
             user.getUnlockedTechnicalVerifications().add(post);
-            user.setTechnicalVerificationCredits(user.getTechnicalVerificationCredits() - 1);
+            user.setTechnicalVerificationReportsCredits(user.getTechnicalVerificationReportsCredits() - 1);
             userRepository.save(user);
         }
         return ResponseEntity.ok().build();
