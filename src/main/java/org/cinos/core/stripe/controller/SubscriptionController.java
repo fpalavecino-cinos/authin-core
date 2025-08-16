@@ -468,6 +468,7 @@ public class SubscriptionController {
                     .price(amount)
                     .createdAt(java.time.LocalDateTime.now())
                     .updatedAt(java.time.LocalDateTime.now())
+                    .subscriptionId(root.has("invoice") ? root.get("invoice").get("subscription").asText() : null)
                     .build();
             paymentDetailRepository.save(paymentDetail);
             log.info("💳 Detalles del pago guardados: {}", paymentDetail);
