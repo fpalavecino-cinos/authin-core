@@ -10,6 +10,7 @@ import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
+import lombok.extern.slf4j.Slf4j;
 import org.cinos.core.stripe.dto.SubscriptionPlanDto;
 import org.cinos.core.users.entity.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import javax.annotation.PostConstruct;
 import java.util.*;
 
 @Service
+@Slf4j
 public class StripeService {
 
     @Value("${stripe.secret.key}")
@@ -139,8 +141,7 @@ public class StripeService {
             Map<String, Object> cancelParams = new HashMap<>();
             cancelParams.put("cancel_at_period_end", true);
             subscription.update(cancelParams);
-            
-            System.out.println("✅ Suscripción " + subscriptionId + " cancelada exitosamente");
+            log.info("✅ Suscripción {} cancelada exitosamente", subscriptionId);
             
         } catch (StripeException e) {
             System.err.println("❌ Error al cancelar suscripción: " + e.getMessage());
@@ -271,7 +272,6 @@ public class StripeService {
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                 .setSuccessUrl(successUrl)
-                .setCancelUrl(cancelUrl)
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
                                 .setPrice(priceId)
@@ -343,12 +343,11 @@ public class StripeService {
         return paymentIntent.getClientSecret();
     }
 
-    public String createVerificationAccessCheckoutSession(Long postId, UserEntity user, String successUrl, String cancelUrl) throws StripeException {
+    public String createVerificationAccessCheckoutSession(Long postId, UserEntity user, String successUrl) throws StripeException {
         // Crear sesión de Stripe Checkout para acceso a verificación
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl)
-                .setCancelUrl(cancelUrl)
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
                                 .setPriceData(
