@@ -35,12 +35,6 @@ public class PostSpecifications {
             predicates.add(excludeCurrentUserPredicate);
             predicates.add(activePostsPredicate);
 
-            // Preferencia de marca
-            // (Eliminado el filtro que solo devolvía la marca preferida)
-
-            // Preferencia de usados/nuevos
-            // (Eliminado el filtro que solo devolvía usados o nuevos)
-
             // --- Cálculo de relevancia ---
             // Factor de marca preferida
             Expression<Double> brandFactor = (preferredBrand != null && !preferredBrand.isEmpty())
@@ -73,24 +67,47 @@ public class PostSpecifications {
             subquery.where(criteriaBuilder.equal(commentRoot.get("postId"), root.get("id")));
             Expression<Double> commentsFactor = criteriaBuilder.toDouble(subquery.getSelection());
 
-            // Factor de proximidad
-            var locationJoin = root.join("location", JoinType.LEFT);
-            Expression<Double> distance = criteriaBuilder.sqrt(
-                    criteriaBuilder.sum(
-                            criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lat"), userLatitude), 2),
-                            criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lng"), userLongitude), 2)
-                    )
-            );
-            Expression<Double> proximityScore = useLocationForRecommendations ? criteriaBuilder.toDouble(
-                    criteriaBuilder.quot(1.0, criteriaBuilder.sum(distance, 1))
-            ) : criteriaBuilder.literal(1.0);
+            // Factor de proximidad - Solo calcular si se debe usar ubicación
+            Expression<Double> proximityScore;
+            Expression<Double> locationFactor;
+            
+            if (Boolean.TRUE.equals(useLocationForRecommendations) 
+                && userLatitude != null && userLongitude != null 
+                && userLatitude != 0.0 && userLongitude != 0.0) {
+                
+                // Solo hacer join de location si se va a usar
+                var locationJoin = root.join("location", JoinType.LEFT);
+                
+                // Calcular distancia
+                Expression<Double> distance = criteriaBuilder.sqrt(
+                        criteriaBuilder.sum(
+                                criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lat"), userLatitude), 2),
+                                criteriaBuilder.power(criteriaBuilder.diff(locationJoin.get("lng"), userLongitude), 2)
+                        )
+                );
+                
+                // Factor de proximidad
+                proximityScore = criteriaBuilder.toDouble(
+                        criteriaBuilder.quot(1.0, criteriaBuilder.sum(distance, 1))
+                );
+                
+                // Factor de preferencia de ubicación
+                locationFactor = criteriaBuilder.<Double>selectCase()
+                    .when(criteriaBuilder.lessThan(distance, 0.5), 1.5) // boost si está cerca
+                    .otherwise(1.0);
+                    
+            } else {
+                // No usar ubicación - valores neutrales
+                proximityScore = criteriaBuilder.literal(1.0);
+                locationFactor = criteriaBuilder.literal(1.0);
+            }
 
-            // Factor de verificación (nuevo)
+            // Factor de verificación
             Expression<Double> verificationFactor = criteriaBuilder.<Double>selectCase()
                     .when(criteriaBuilder.isTrue(root.get("isVerified")), 3.0) // Boost para verificados
                     .otherwise(1.0); // Valor base para no verificados
 
-            // Factor de relación (modificado)
+            // Factor de relación
             Expression<Double> relationshipFactor = criteriaBuilder.<Double>selectCase()
                     .when(criteriaBuilder.in(accountJoin.get("id")).value(followingsIds), 1.5) // Boost para seguidos
                     .otherwise(1.0); // Valor base para no seguidos
@@ -107,17 +124,6 @@ public class PostSpecifications {
                     .otherwise(1.0);
             } else if (Boolean.TRUE.equals(wantsUsedCars) && Boolean.TRUE.equals(wantsNewCars)) {
                 usedNewFactor = criteriaBuilder.literal(1.2); // pequeño boost si le da igual
-            }
-
-            // Factor de preferencia de ubicación
-            Expression<Double> locationFactor = criteriaBuilder.literal(1.0);
-            if (Boolean.TRUE.equals(useLocationForRecommendations)
-                && userLatitude != null && userLongitude != null
-                && userLatitude != 0.0 && userLongitude != 0.0) {
-                // Si la distancia es menor a cierto umbral, boost
-                locationFactor = criteriaBuilder.<Double>selectCase()
-                    .when(criteriaBuilder.lessThan(distance, 0.5), 1.5) // boost si está cerca (ajusta el umbral según tu escala)
-                    .otherwise(1.0);
             }
 
             // Puntuación de relevancia modificada (ahora con multiplicación de factores)
