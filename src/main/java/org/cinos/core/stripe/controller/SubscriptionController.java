@@ -291,10 +291,8 @@ public class SubscriptionController {
             String email = userEntity.getEmail();
             // PriceId real de Stripe
             String priceId = request.getPlanId();
-            String successUrl = request.getSuccessUrl();
-            String cancelUrl = request.getCancelUrl();
-            String url = stripeService.createSubscriptionCheckoutSession(priceId, successUrl, cancelUrl, email);
-            return ResponseEntity.ok(SubscriptionResponse.builder() .checkoutUrl(url).success(true).build());
+            String url = stripeService.createSubscriptionCheckoutSession(priceId, email);
+            return ResponseEntity.ok(SubscriptionResponse.builder().checkoutUrl(url).success(true).build());
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(SubscriptionResponse.builder().message("Error: " + e.getMessage()).success(false).build());

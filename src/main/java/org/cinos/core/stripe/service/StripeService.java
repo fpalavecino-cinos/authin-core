@@ -267,8 +267,9 @@ public class StripeService {
     /**
      * Crea una sesión de Stripe Checkout para suscripción
      */
-    public String createSubscriptionCheckoutSession(String priceId, String successUrl, String cancelUrl, String customerEmail) throws StripeException {
+    public String createSubscriptionCheckoutSession(String priceId, String customerEmail) throws StripeException {
         Stripe.apiKey = stripeSecretKey;
+        String successUrl = "http://localhost:8100/suscripcion-exito";
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
                 .setSuccessUrl(successUrl)
