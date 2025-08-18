@@ -37,15 +37,12 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
         if (user.getRoles() == null || !user.getRoles().contains(org.cinos.core.users.model.Role.PREMIUM)) {
             throw new RuntimeException("Solo los usuarios premium pueden solicitar una verificación técnica.");
         }
-        // Validar que no haya solicitado otra verificación este mes
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime startOfMonth = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
-        java.time.LocalDateTime endOfMonth = now.withDayOfMonth(now.toLocalDate().lengthOfMonth()).withHour(23).withMinute(59).withSecond(59).withNano(999999999);
-        long count = technicalVerificationRepository.countByPost_UserAccount_IdAndSentToVerificationDateBetween(
-            post.getUserAccount().getId(), startOfMonth, endOfMonth);
-        if (count > 0) {
-            throw new RuntimeException("Solo puedes solicitar una verificación técnica por mes (lo que dura la suscripción).");
+        
+        // Validar que el usuario tenga créditos de verificación técnica disponibles
+        if (user.getTechnicalVerificationCredits() == null || user.getTechnicalVerificationCredits() <= 0) {
+            throw new RuntimeException("No tienes verificaciones técnicas disponibles. Necesitas créditos para solicitar una verificación.");
         }
+
         String message = """
                 <p>Pedido de verificación técnica para <strong>%s %s</strong></p>
                 <p><strong>Datos del vehiculo:</strong></p>
@@ -74,6 +71,10 @@ public class TechnicalVerificationService implements ITechnicalVerificationServi
             technicalVerification.setStatus(VerificationStatus.SENT);
             technicalVerification.setSentToVerificationDate(LocalDateTime.now());
             technicalVerificationRepository.save(technicalVerification);
+            
+            // Consumir un crédito de verificación técnica
+            user.setTechnicalVerificationCredits(user.getTechnicalVerificationCredits() - 1);
+            userRepository.save(user);
         } catch (Exception e) {
             throw new RuntimeException("Error al enviar el correo", e);
         }
