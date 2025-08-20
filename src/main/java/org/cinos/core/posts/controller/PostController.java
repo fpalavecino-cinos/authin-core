@@ -20,6 +20,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.net.URL;
@@ -289,6 +290,44 @@ public class PostController {
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/process-large-image")
+    public ResponseEntity<ImageProcessingResponse> processLargeImage(@RequestParam("image") MultipartFile image) {
+        try {
+            // Validar que el archivo sea una imagen
+            if (image == null || image.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            String contentType = image.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Procesar la imagen grande con optimizaciones específicas
+            Map<String, String> imageResolutions = imageProcessingService.processLargeImage(image);
+            
+            // Obtener información de la imagen
+            ImageProcessingService.ImageInfo imageInfo = imageProcessingService.getImageInfo(image);
+            
+            ImageProcessingResponse response = ImageProcessingResponse.builder()
+                    .originalUrl(imageResolutions.get("original"))
+                    .mediumUrl(imageResolutions.get("medium"))
+                    .thumbnailUrl(imageResolutions.get("thumbnail"))
+                    .width(imageInfo.getWidth())
+                    .height(imageInfo.getHeight())
+                    .size(imageInfo.getSize())
+                    .format(imageInfo.getFormat())
+                    .build();
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error procesando imagen grande: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @GetMapping("/image-info")
     public ResponseEntity<ImageInfoResponse> getImageInfo(@RequestParam String imageUrl) {
         try {
@@ -316,6 +355,45 @@ public class PostController {
 
         } catch (Exception e) {
             log.error("Error obteniendo información de imagen: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PostMapping("/restore-image")
+    public ResponseEntity<InputStreamResource> restoreImageToOriginalSize(
+            @RequestParam String imageUrl,
+            @RequestParam int originalWidth,
+            @RequestParam int originalHeight) {
+        try {
+            // Validar parámetros
+            if (imageUrl == null || imageUrl.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            if (originalWidth <= 0 || originalHeight <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Restaurar imagen a su tamaño original
+            byte[] restoredImageBytes = imageProcessingService.restoreImageToOriginalSize(
+                    imageUrl, originalWidth, originalHeight);
+
+            // Crear headers para la descarga
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.IMAGE_JPEG);
+            headers.setContentDispositionFormData("attachment", "imagen_restaurada.jpg");
+            headers.set("Cache-Control", "no-cache");
+
+            // Crear el recurso de entrada
+            InputStreamResource resource = new InputStreamResource(new ByteArrayInputStream(restoredImageBytes));
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(resource);
+
+        } catch (Exception e) {
+            log.error("Error restaurando imagen: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

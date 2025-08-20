@@ -28,12 +28,12 @@ public class StorageService {
     private final Storage storage;
 
     // Configuraciones para el procesamiento de imágenes
-    private static final int MAX_WIDTH = 1920;
-    private static final int MAX_HEIGHT = 1080;
+    private static final int MAX_WIDTH = 3840; // 4K support
+    private static final int MAX_HEIGHT = 2160; // 4K support
     private static final int THUMBNAIL_WIDTH = 400;
     private static final int THUMBNAIL_HEIGHT = 300;
     private static final float JPEG_QUALITY = 0.85f;
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
     public StorageService() {
         this.storage = StorageOptions.getDefaultInstance().getService();

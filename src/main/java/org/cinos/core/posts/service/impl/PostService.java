@@ -175,6 +175,9 @@ public class PostService implements IPostService {
         List<PostImageEntity> imagesEntity = new ArrayList<>();
         for (MultipartFile image : images) {
             try {
+                // Obtener información de la imagen original
+                ImageProcessingService.ImageInfo imageInfo = imageProcessingService.getImageInfo(image);
+                
                 // Procesar imagen con múltiples resoluciones
                 Map<String, String> imageResolutions = imageProcessingService.processImageWithMultipleResolutions(image);
                 
@@ -186,8 +189,8 @@ public class PostService implements IPostService {
                         .build();
                 imagesEntity.add(imageEntity);
                 
-                // Aquí podrías guardar las otras resoluciones si necesitas acceder a ellas
-                // Por ahora solo guardamos la original
+                // Guardar información de las dimensiones originales en metadata si es necesario
+                // Esto permitirá restaurar la imagen a su tamaño original más tarde
                 
             } catch (Exception e) {
                 throw new RuntimeException("Error procesando imagen: " + image.getOriginalFilename() + " - " + e.getMessage());

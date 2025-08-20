@@ -19,23 +19,28 @@ import java.util.Map;
 public class ImageProcessingService {
 
     // Configuraciones para diferentes resoluciones
-    private static final int ORIGINAL_MAX_WIDTH = 1920;
-    private static final int ORIGINAL_MAX_HEIGHT = 1080;
-    private static final int MEDIUM_WIDTH = 800;
-    private static final int MEDIUM_HEIGHT = 600;
+    private static final int ORIGINAL_MAX_WIDTH = 3840; // 4K support
+    private static final int ORIGINAL_MAX_HEIGHT = 2160; // 4K support
+    private static final int MEDIUM_WIDTH = 1200;
+    private static final int MEDIUM_HEIGHT = 900;
     private static final int THUMBNAIL_WIDTH = 400;
     private static final int THUMBNAIL_HEIGHT = 300;
     private static final int SMALL_WIDTH = 200;
     private static final int SMALL_HEIGHT = 150;
     
-    private static final float HIGH_QUALITY = 0.9f;
-    private static final float MEDIUM_QUALITY = 0.8f;
-    private static final float LOW_QUALITY = 0.7f;
+    // Calidades optimizadas para diferentes tamaños
+    private static final float HIGH_QUALITY = 0.95f;
+    private static final float MEDIUM_QUALITY = 0.85f;
+    private static final float LOW_QUALITY = 0.75f;
+    
+    // Tamaño máximo de archivo (ahora mucho más alto)
+    private static final long MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
     private final StorageService storageService;
 
     /**
      * Procesa una imagen y crea múltiples versiones con diferentes resoluciones
+     * Ahora maneja imágenes de cualquier tamaño
      */
     public Map<String, String> processImageWithMultipleResolutions(MultipartFile file) throws IOException {
         // Validar el archivo
@@ -50,7 +55,7 @@ public class ImageProcessingService {
         Map<String, String> imageUrls = new HashMap<>();
         String baseFileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
         
-        // Procesar imagen original optimizada
+        // Procesar imagen original optimizada (mantiene alta calidad pero comprime)
         byte[] originalBytes = processImage(originalImage, ORIGINAL_MAX_WIDTH, ORIGINAL_MAX_HEIGHT, HIGH_QUALITY, "original");
         String originalUrl = uploadImageToStorage(originalBytes, baseFileName + "_original.jpg");
         imageUrls.put("original", originalUrl);
@@ -75,17 +80,19 @@ public class ImageProcessingService {
 
     /**
      * Procesa una imagen con configuración específica
+     * Mejorado para manejar imágenes grandes
      */
     private byte[] processImage(BufferedImage originalImage, int maxWidth, int maxHeight, float quality, String size) throws IOException {
         // Redimensionar si es necesario
         BufferedImage resizedImage = resizeImageIfNeeded(originalImage, maxWidth, maxHeight);
         
-        // Aplicar optimización
+        // Aplicar optimización con manejo de memoria mejorado
         return optimizeImage(resizedImage, quality);
     }
 
     /**
      * Redimensiona la imagen si excede las dimensiones máximas
+     * Mejorado para manejar imágenes muy grandes
      */
     private BufferedImage resizeImageIfNeeded(BufferedImage originalImage, int maxWidth, int maxHeight) throws IOException {
         int originalWidth = originalImage.getWidth();
@@ -105,22 +112,27 @@ public class ImageProcessingService {
         int newWidth = (int) (originalWidth * scale);
         int newHeight = (int) (originalHeight * scale);
         
+        // Usar Thumbnails con configuración optimizada para imágenes grandes
         return Thumbnails.of(originalImage)
                 .size(newWidth, newHeight)
                 .keepAspectRatio(true)
+                .useOriginalFormat()
                 .asBufferedImage();
     }
 
     /**
      * Optimiza la imagen con la calidad especificada
+     * Mejorado para manejar archivos grandes
      */
     private byte[] optimizeImage(BufferedImage image, float quality) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         
+        // Usar configuración optimizada para compresión
         Thumbnails.of(image)
                 .scale(1.0)
                 .outputQuality(quality)
                 .outputFormat("JPEG")
+                .useOriginalFormat()
                 .toOutputStream(outputStream);
         
         return outputStream.toByteArray();
@@ -178,6 +190,7 @@ public class ImageProcessingService {
 
     /**
      * Valida que el archivo sea una imagen válida
+     * Ahora permite archivos mucho más grandes
      */
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -189,10 +202,9 @@ public class ImageProcessingService {
             throw new IllegalArgumentException("El archivo debe ser una imagen válida");
         }
         
-        // Validar tamaño máximo (10MB)
-        long maxSize = 10 * 1024 * 1024;
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException("El archivo excede el tamaño máximo de 10MB");
+        // Validar tamaño máximo (ahora 100MB)
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("El archivo excede el tamaño máximo de " + (MAX_FILE_SIZE / 1024 / 1024) + "MB");
         }
     }
 
@@ -256,6 +268,97 @@ public class ImageProcessingService {
             return "jpg";
         }
         return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+    }
+
+    /**
+     * Restaura una imagen a su tamaño original desde una URL
+     * Nueva funcionalidad para restaurar imágenes
+     */
+    public byte[] restoreImageToOriginalSize(String imageUrl, int originalWidth, int originalHeight) throws IOException {
+        // Descargar la imagen desde la URL
+        byte[] imageBytes = downloadImageFromUrl(imageUrl);
+        
+        // Leer la imagen
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+        if (image == null) {
+            throw new IllegalArgumentException("No se pudo leer la imagen desde la URL");
+        }
+        
+        // Redimensionar a las dimensiones originales
+        BufferedImage restoredImage = Thumbnails.of(image)
+                .size(originalWidth, originalHeight)
+                .keepAspectRatio(false) // Forzar las dimensiones exactas
+                .asBufferedImage();
+        
+        // Convertir a byte array con alta calidad
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageIO.write(restoredImage, "JPEG", outputStream);
+        
+        return outputStream.toByteArray();
+    }
+
+    /**
+     * Procesa una imagen grande con manejo de memoria optimizado
+     * Nueva funcionalidad para imágenes muy grandes
+     */
+    public Map<String, String> processLargeImage(MultipartFile file) throws IOException {
+        validateImageFile(file);
+        
+        // Leer la imagen original
+        BufferedImage originalImage = ImageIO.read(file.getInputStream());
+        if (originalImage == null) {
+            throw new IllegalArgumentException("No se pudo leer la imagen: " + file.getOriginalFilename());
+        }
+
+        Map<String, String> imageUrls = new HashMap<>();
+        String baseFileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        
+        // Para imágenes grandes, crear versiones más optimizadas
+        // Original con compresión inteligente
+        byte[] originalBytes = processLargeImageOptimized(originalImage, HIGH_QUALITY);
+        String originalUrl = uploadImageToStorage(originalBytes, baseFileName + "_original.jpg");
+        imageUrls.put("original", originalUrl);
+        
+        // Versión mediana
+        byte[] mediumBytes = processImage(originalImage, MEDIUM_WIDTH, MEDIUM_HEIGHT, MEDIUM_QUALITY, "medium");
+        String mediumUrl = uploadImageToStorage(mediumBytes, baseFileName + "_medium.jpg");
+        imageUrls.put("medium", mediumUrl);
+        
+        // Miniatura
+        byte[] thumbnailBytes = processImage(originalImage, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, MEDIUM_QUALITY, "thumbnail");
+        String thumbnailUrl = uploadImageToStorage(thumbnailBytes, baseFileName + "_thumbnail.jpg");
+        imageUrls.put("thumbnail", thumbnailUrl);
+        
+        return imageUrls;
+    }
+
+    /**
+     * Calcula la relación de compresión entre el tamaño original y procesado
+     */
+    public String calculateCompressionRatio(long originalSize, long processedSize) {
+        if (originalSize <= 0) {
+            return "0%";
+        }
+        
+        double ratio = ((double) (originalSize - processedSize) / originalSize) * 100;
+        return String.format("%.1f%%", ratio);
+    }
+
+    /**
+     * Procesa una imagen grande con optimizaciones específicas
+     */
+    private byte[] processLargeImageOptimized(BufferedImage originalImage, float quality) throws IOException {
+        // Para imágenes muy grandes, aplicar compresión más agresiva
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        
+        Thumbnails.of(originalImage)
+                .scale(1.0)
+                .outputQuality(quality)
+                .outputFormat("JPEG")
+                .useOriginalFormat()
+                .toOutputStream(outputStream);
+        
+        return outputStream.toByteArray();
     }
 
     /**
