@@ -132,7 +132,6 @@ public class ImageProcessingService {
                 .scale(1.0)
                 .outputQuality(quality)
                 .outputFormat("JPEG")
-                .useOriginalFormat()
                 .toOutputStream(outputStream);
         
         return outputStream.toByteArray();
@@ -355,7 +354,6 @@ public class ImageProcessingService {
                 .scale(1.0)
                 .outputQuality(quality)
                 .outputFormat("JPEG")
-                .useOriginalFormat()
                 .toOutputStream(outputStream);
         
         return outputStream.toByteArray();
